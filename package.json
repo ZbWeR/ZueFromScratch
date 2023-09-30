@@ -1,0 +1,19 @@
+{
+  "name": "@zbwer/zue",
+  "version": "1.0.0",
+  "description": "A minimalistic MVVM framework, serving as a reimplementation of Vue.",
+  "scripts": {
+    "build": "rollup -c .\\scripts\\config.mjs"
+  },
+  "devDependencies": {
+    "@rollup/plugin-replace": "^5.0.2",
+    "@rollup/plugin-terser": "^0.4.3",
+    "rollup": "^3.29.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZbWeR/ZueFromScratch.git"
+  },
+  "author": "zbwer",
+  "license": "MIT"
+}
