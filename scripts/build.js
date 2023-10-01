@@ -15,7 +15,7 @@ build();
 async function build() {
   try {
     let startTime = new Date();
-
+    // 调用 rollup
     const { stderr } = await execa(
       "rollup",
       [
@@ -41,6 +41,10 @@ async function build() {
   }
 }
 
+/**
+ * 输出文件信息：大小,耗时,路径
+ * @param {string} stdout - 来自 rollup 的输出信息
+ */
 async function logTimeAndSize(stdout) {
   // 剔除颜色转义字符
   const str = stdout.replace(/\u001b\[\d+m/g, "");

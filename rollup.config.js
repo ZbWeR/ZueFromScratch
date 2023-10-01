@@ -33,6 +33,12 @@ const rollupConfigs = Object.keys(outputConfigs).map((format) =>
   createConfig(format, outputConfigs[format])
 );
 
+/**
+ * 导出配置信息
+ * @param {string} format - 打包格式
+ * @param {object} output - 详细打包信息
+ * @returns rollup 配置信息
+ */
 function createConfig(format, output) {
   const isProductionBuild = process.env.__DEV__ === "false";
   const isBundlerESMBuild = /esm-bundler/.test(format);
@@ -55,7 +61,6 @@ function createConfig(format, output) {
     plugins.push(
       terser({
         compress: { arguments: true, dead_code: true },
-        toplevel: true,
         keep_classnames: true,
         keep_fnames: true,
       })
