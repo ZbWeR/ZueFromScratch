@@ -2,12 +2,17 @@
   "name": "@zbwer/zue",
   "version": "1.0.0",
   "description": "A minimalistic MVVM framework, serving as a reimplementation of Vue.",
+  "type": "module",
   "scripts": {
-    "build": "rollup -c .\\scripts\\config.mjs"
+    "build": "node scripts/build.js",
+    "build:dev": "node scripts/build.js -d"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
     "@rollup/plugin-terser": "^0.4.3",
+    "chalk": "^5.3.0",
+    "execa": "^8.0.1",
+    "minimist": "^1.2.8",
     "rollup": "^3.29.4"
   },
   "repository": {
