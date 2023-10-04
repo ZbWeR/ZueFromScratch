@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import replace from "@rollup/plugin-replace";
 import terser from "@rollup/plugin-terser";
+import typescript from "rollup-plugin-typescript2";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT_PATH = path.dirname(__filename);
@@ -29,6 +30,7 @@ const outputConfigs = {
   },
 };
 
+// 获取各种导出格式的配置信息
 const rollupConfigs = Object.keys(outputConfigs).map((format) =>
   createConfig(format, outputConfigs[format])
 );
@@ -42,11 +44,22 @@ const rollupConfigs = Object.keys(outputConfigs).map((format) =>
 function createConfig(format, output) {
   const isProductionBuild = process.env.__DEV__ === "false";
   const isBundlerESMBuild = /esm-bundler/.test(format);
+  const isBrowserBuild = format in ["global", "esm-browser"];
 
   // 入口文件配置
-  let entryFile = resolve("src/index.js");
+  let entryFile = resolve("src/index.ts");
   // 导出文件名调整
   if (isProductionBuild) output.file = output.file.replace(".js", ".prod.js");
+
+  // ts 插件配置
+  const tsInfo = {
+    tsconfig: resolve("tsconfig.json"),
+    tsconfigOverride: {
+      compilerOptions: {
+        target: isBrowserBuild ? "es5" : "es6",
+      },
+    },
+  };
   // replace 插件配置
   const replacements = {
     __TEST__: `false`,
@@ -55,8 +68,14 @@ function createConfig(format, output) {
       ? `!!(process.env.NODE_ENV !== 'production')`
       : String(!isProductionBuild),
   };
-  const plugins = [replace({ values: replacements, preventAssignment: true })];
-  // terser 插件配置
+
+  // 通用插件选项
+  const plugins = [
+    replace({ values: replacements, preventAssignment: true }),
+    typescript(tsInfo),
+  ];
+
+  // terser 插件配置（Prod）
   if (isProductionBuild) {
     plugins.push(
       terser({
@@ -66,6 +85,7 @@ function createConfig(format, output) {
       })
     );
   }
+
   return {
     input: entryFile,
     output: {

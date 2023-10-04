@@ -1,5 +1,5 @@
-import { log } from "./logger";
-import message from "./message";
+import { log } from "./logger.js";
+import message from "./message.js";
 
 const msg = message.hi;
 
