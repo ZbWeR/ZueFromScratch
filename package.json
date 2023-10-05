@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build.js",
     "dev": "node scripts/build.js -d",
-    "test": "vitest"
+    "test": "vitest",
+    "demo": "tsc & node demo_test/demo.js"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",

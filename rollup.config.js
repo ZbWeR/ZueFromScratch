@@ -57,6 +57,8 @@ function createConfig(format, output) {
     tsconfigOverride: {
       compilerOptions: {
         target: isBrowserBuild ? "es5" : "es6",
+        outDir: resolve("dist"),
+        sourceMap: !!process.env.SOURCE_MAP,
       },
     },
   };

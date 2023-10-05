@@ -2,9 +2,9 @@
     "compilerOptions": {
         "target": "ES6",
         "module": "ESNext",
-        "sourceMap": true,
+        "sourceMap": false,
         "rootDir": "./src",
-        "outDir": "./dist",
+        "outDir": "./demo_test",
         "esModuleInterop": true,
         "strict": true,
         "skipLibCheck": true,
