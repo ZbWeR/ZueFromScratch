@@ -4,6 +4,7 @@
  */
 export interface EffectFunction<T = any> extends Function {
   deps: Array<Set<EffectFunction>>;
+  options?: EffectOptions;
 }
 
 /**
@@ -11,3 +12,8 @@ export interface EffectFunction<T = any> extends Function {
  * 它是一个扩展了Map的接口，键是PropertyKey类型，值是EffectFunction实例的Set集合。
  */
 export interface DepsMap extends Map<PropertyKey, Set<EffectFunction>> {}
+
+export interface EffectOptions {
+  scheduler?: Function;
+  lazy?: boolean;
+}

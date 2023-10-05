@@ -1,4 +1,4 @@
-import { DepsMap, EffectFunction } from "../../types/watchEffect";
+import { DepsMap, EffectFunction, EffectOptions } from "../../types/watchEffect";
 
 // 当前激活的副作用函数
 let activeEffect: EffectFunction | undefined;
@@ -45,27 +45,38 @@ export function trigger<T, K extends keyof T>(target: T, key: K) {
         effectToRun.add(fn);
       }
     });
-  effectToRun.forEach((fn) => fn());
+  effectToRun.forEach((fn) => {
+    if (fn.options?.scheduler) {
+      fn.options.scheduler(fn);
+    } else {
+      fn();
+    }
+  });
 }
 
 /**
  * 注册副作用函数
  * @param fn - 原始函数
  */
-export function effect(fn: Function): EffectFunction {
+export function effect(fn: Function, options: EffectOptions = {}): EffectFunction {
   const effectFn: EffectFunction = () => {
     // 清除依赖，避免分支切换时遗留的副作用函数干扰运行
     cleanup(effectFn);
     activeEffect = effectFn;
     // 处理副作用函数嵌套
     effectStack.push(effectFn);
-    fn();
+    const res = fn();
     effectStack.pop();
     activeEffect = effectStack[effectStack.length - 1];
+    return res;
   };
+  effectFn.options = options;
   // 辅助清除依赖：存储所有与该副作用函数有关的依赖集合
   effectFn.deps = [];
-  effectFn();
+  // 非 lazy 时立即执行
+  if (!options.lazy) {
+    effectFn();
+  }
   return effectFn;
 }
 

@@ -1,4 +1,4 @@
-import { track, trigger } from "../core/effect/watchEffect";
+import { track, trigger } from "../core/effect/watchEffect.js";
 
 function handler(): ProxyHandler<any> {
   return {
@@ -22,6 +22,6 @@ function handler(): ProxyHandler<any> {
  * 创建一个响应式对象
  * @param data - 原始对象
  */
-function reactive(data: object): object {
+export function reactive(data: object) {
   return new Proxy(data, handler());
 }
