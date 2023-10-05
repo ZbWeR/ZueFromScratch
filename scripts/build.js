@@ -48,12 +48,10 @@ async function build() {
 async function logTimeAndSize(stdout) {
   // 剔除颜色转义字符
   const str = stdout.replace(/\u001b\[\d+m/g, "");
+  console.log(str);
   // 捕获文件名称与构建耗时
-  const fileRegex = /created\s(.*?)\sin\s(\d+)ms/g;
-  const matches = Array.from(str.matchAll(fileRegex), (match) => [
-    match[1],
-    match[2],
-  ]);
+  const fileRegex = /created\s(.*?)\sin\s((\d+(\.\d+)?)(ms|s))/g;
+  const matches = Array.from(str.matchAll(fileRegex), (match) => [match[1], match[2]]);
 
   for (let match of matches) {
     const [filePath, costTime] = match;
@@ -61,7 +59,7 @@ async function logTimeAndSize(stdout) {
     const { size } = await fs.promises.stat(filePath);
     const tmpStr = `Size: ${chalk.cyan(
       (size / 1024).toFixed(2) + "kb"
-    )}, Time: ${chalk.cyan(costTime + "ms")}, File: ${chalk.cyan(filePath)}`;
+    )}, Time: ${chalk.cyan(costTime)}, File: ${chalk.cyan(filePath)}`;
     console.log(chalk.green(tmpStr));
   }
 }
