@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.js",
-    "dev": "node scripts/build.js -d"
+    "dev": "node scripts/build.js -d",
+    "test": "vitest"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
@@ -15,7 +16,8 @@
     "execa": "^8.0.1",
     "minimist": "^1.2.8",
     "rollup": "^3.29.4",
-    "rollup-plugin-typescript2": "^0.36.0"
+    "rollup-plugin-typescript2": "^0.36.0",
+    "vitest": "^0.34.6"
   },
   "repository": {
     "type": "git",
