@@ -1,5 +1,5 @@
-import { reactive } from "../../src/reactivity/reactive";
-import { effect } from "../../src/core/effect/watchEffect";
+import { reactive } from "../../../src/reactivity/reactive";
+import { effect } from "../../../src/core/effect/watchEffect";
 import { test, vi, expect, describe } from "vitest";
 
 describe("Reactive", () => {
