@@ -22,6 +22,6 @@ function handler(): ProxyHandler<any> {
  * 创建一个响应式对象
  * @param data - 原始对象
  */
-export function reactive(data: object) {
+export function reactive<T extends object>(data: T): T {
   return new Proxy(data, handler());
 }
