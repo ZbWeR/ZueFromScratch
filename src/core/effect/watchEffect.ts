@@ -1,4 +1,4 @@
-import { DepsMap, EffectFunction, EffectOptions } from "../../types/watchEffect";
+import { DepsMap, EffectFunction, EffectOptions, TriggerType } from "types/watchEffect";
 
 // 当前激活的副作用函数
 let activeEffect: EffectFunction | undefined;
@@ -6,14 +6,21 @@ let activeEffect: EffectFunction | undefined;
 const effectStack: EffectFunction[] = [];
 // 副作用函数桶：用于收集依赖
 const effectBucket: WeakMap<any, DepsMap> = new WeakMap();
+// 可迭代对象的 key 值
+const iterateBucket: WeakMap<any, symbol> = new WeakMap();
 
 /**
  * 收集依赖：在副作用函数与被操作的目标字段之间建立依赖联系。
  * @param target - 原始对象
- * @param key - 原始对象的键
+ * @param key - 原始对象的键, k 可以为 symbol 类型是为了兼容 for...in... 操作
  */
-export function track<T, K extends keyof T>(target: T, key: K) {
+export function track<T, K extends keyof T>(target: T, key: K | symbol) {
   if (!activeEffect) return;
+
+  // 【for...in...】记录对象 target 的可迭代键，以便后续调用
+  if (typeof key === "symbol") iterateBucket.set(target, key);
+
+  // 收集 target.key 相关的副作用函数
   let depsMap = effectBucket.get(target);
   if (!depsMap) {
     effectBucket.set(target, (depsMap = new Map()));
@@ -23,6 +30,7 @@ export function track<T, K extends keyof T>(target: T, key: K) {
     depsMap.set(key, (deps = new Set()));
   }
   deps.add(activeEffect);
+
   // 反向收集，以便后续清除
   activeEffect.deps.push(deps);
 }
@@ -31,11 +39,13 @@ export function track<T, K extends keyof T>(target: T, key: K) {
  * 触发执行副作用函数
  * @param target - 原始对象
  * @param key - 原始对象的键
+ * @param type - 触发事件的类型
  */
-export function trigger<T, K extends keyof T>(target: T, key: K) {
+export function trigger<T, K extends keyof T>(target: T, key: K, type?: TriggerType) {
   const depsMap = effectBucket.get(target);
   if (!depsMap) return;
   const effects = depsMap.get(key);
+
   // 避免由于 effects 不断的增加/删除引起的无限递归。
   const effectToRun: Set<EffectFunction> = new Set();
   effects &&
@@ -45,6 +55,16 @@ export function trigger<T, K extends keyof T>(target: T, key: K) {
         effectToRun.add(fn);
       }
     });
+
+  // 【for...in...】只有删除/增加属性的操作才会触发
+  if (type === TriggerType.ADD || type === TriggerType.DELETE) {
+    const iterateKey = iterateBucket.get(target);
+    iterateKey &&
+      depsMap.get(iterateKey)?.forEach((fn) => {
+        if (fn !== activeEffect) effectToRun.add(fn);
+      });
+  }
+
   effectToRun.forEach((fn) => {
     if (fn.options?.scheduler) {
       fn.options.scheduler(fn);

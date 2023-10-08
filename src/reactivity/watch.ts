@@ -1,5 +1,5 @@
 import { effect } from "../core/effect/watchEffect.js";
-import { watchOptions, watchCallBackFunction } from "../types/reactivity";
+import { watchOptions, watchCallBackFunction } from "types/reactivity";
 
 /**
  * 深度遍历对象，绑定监听器到所有属性上

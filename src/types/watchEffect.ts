@@ -13,7 +13,19 @@ export interface EffectFunction<T = any> extends Function {
  */
 export interface DepsMap extends Map<PropertyKey, Set<EffectFunction>> {}
 
+/**
+ * EffectOptions 接口。
+ * 它有两个可选属性：scheduler 和 lazy。
+ * scheduler 是一个 Function 类型的属性，用于安排副作用函数的执行。
+ * lazy 是一个 boolean 类型的属性，如果为 true，则副作用函数在初始化时不会立即执行，而是在需要时执行。
+ */
 export interface EffectOptions {
   scheduler?: Function;
   lazy?: boolean;
+}
+
+export enum TriggerType {
+  SET = "SET",
+  ADD = "ADD",
+  DELETE = "DELETE",
 }
