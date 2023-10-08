@@ -7,5 +7,8 @@ export default defineConfig({
       reporter: ["html"],
       enabled: true,
     },
+    alias: {
+      types: "/src/types",
+    },
   },
 });
