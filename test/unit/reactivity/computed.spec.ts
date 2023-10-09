@@ -5,7 +5,7 @@ import { effect } from "../../../src/core/effect/watchEffect";
 import { computed } from "../../../src/reactivity/computed";
 
 describe("Computed", () => {
-  let reactiveObj: ReturnType<typeof reactive<{ foo: number; bar: number }>>;
+  let reactiveObj: ReturnType<typeof reactive>;
   let sumFun: ReturnType<typeof vi.fn>;
   let sumRes: ReturnType<typeof computed>;
 

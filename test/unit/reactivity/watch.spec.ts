@@ -4,7 +4,7 @@ import { reactive } from "../../../src/reactivity/reactive";
 import { watch } from "../../../src/reactivity/watch";
 
 describe("Watch", () => {
-  let reactiveObj: ReturnType<typeof reactive<{ foo: number; bar: number }>>;
+  let reactiveObj: ReturnType<typeof reactive>;
   let cbFn: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
