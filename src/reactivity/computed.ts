@@ -1,4 +1,4 @@
-import { effect, track, trigger } from "../core/effect/watchEffect.js";
+import { effect, track, trigger } from "../core/effect/watchEffect";
 
 export function computed<T>(getter: () => T): { readonly value: T } {
   // 实现数据缓存

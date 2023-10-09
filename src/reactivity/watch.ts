@@ -1,4 +1,4 @@
-import { effect } from "../core/effect/watchEffect.js";
+import { effect } from "../core/effect/watchEffect";
 import { watchOptions, watchCallBackFunction } from "types/reactivity";
 
 /**
