@@ -1,8 +1,14 @@
-import { reactive } from "../../../src/reactivity/reactive";
-import { effect } from "../../../src/core/effect/watchEffect";
 import { test, vi, expect, describe } from "vitest";
 
-describe("Reactive", () => {
+import {
+  reactive,
+  shadowReactive,
+  readonly,
+  shadowReadonly,
+} from "../../../src/reactivity/reactive";
+import { effect } from "../../../src/core/effect/watchEffect";
+
+describe("reactive", () => {
   // 测试 proxy 是否代理成功
   test("should return a reactive object", () => {
     const data = reactive({ name: "jack", age: 18 });
@@ -96,7 +102,7 @@ describe("Reactive", () => {
   });
 
   // 测试由原型引起的更新是否会重复触发副作用
-  test("temp name", () => {
+  test("should not repeatedly trigger effects due to updates caused by the prototype", () => {
     const child: any = reactive({});
     const parent = reactive({ bar: 1 });
     Object.setPrototypeOf(child, parent);
@@ -108,5 +114,77 @@ describe("Reactive", () => {
     child.bar = 2;
     // parent 的 proxy 不会触发副作用
     expect(effectFn).toBeCalledTimes(2);
+  });
+
+  // 测试深层代理是否成功
+  test("should trigger effects when operations are performed on deep properties", () => {
+    const reactiveObj = reactive({ foo: { bar: 1 }, val: 2 });
+    const effectFn = vi.fn(() => reactiveObj.foo.bar);
+    effect(effectFn);
+
+    expect(effectFn).toBeCalledTimes(1);
+    reactiveObj.foo.bar = 2;
+    expect(effectFn).toBeCalledTimes(2);
+  });
+
+  // 非法参数应当抛出错误
+  test("should throw an error when a primitive value that is not an object is passed in", () => {
+    const spyErr = vi.spyOn(console, "error");
+
+    reactive(1);
+    expect(spyErr).toBeCalledTimes(1);
+    reactive("喵喵喵");
+    expect(spyErr).toBeCalledTimes(2);
+    reactive(false);
+    expect(spyErr).toBeCalledTimes(3);
+    reactive(null);
+    expect(spyErr).toBeCalledTimes(4);
+  });
+});
+
+// 浅层代理测试
+describe("shadowReactive", () => {
+  test("should not trigger effects when operations are performed on deep properties", () => {
+    const reactiveObj = shadowReactive({ foo: { bar: 1 }, val: 2 });
+    const getBar = vi.fn(() => reactiveObj.foo.bar);
+    const getVal = vi.fn(() => reactiveObj.val);
+    effect(getBar);
+    effect(getVal);
+
+    // obj.foo.bar 不是响应的
+    expect(getBar).toBeCalledTimes(1);
+    reactiveObj.foo.bar = 2;
+    expect(getBar).toBeCalledTimes(1);
+    // obj.foo 是响应的
+    reactiveObj.foo = { bar: 3 };
+    expect(getBar).toBeCalledTimes(2);
+  });
+});
+
+// 只读代理对象测试
+describe("readonly", () => {
+  // 只读对象不能被设置/删除
+  test("should print a warning message when an attempt is made to set or delete a property of a read-only object", () => {
+    const readonlyObj = readonly({ name: "Jake", age: 36, foo: { bar: 1 } });
+    const spyWarn = vi.spyOn(console, "warn");
+
+    readonlyObj.name = "Tom";
+    expect(spyWarn).toBeCalledTimes(1);
+    delete readonlyObj.age;
+    expect(spyWarn).toBeCalledTimes(2);
+    // 深层只读
+    readonlyObj.foo.bar = 2;
+    expect(spyWarn).toBeCalledTimes(3);
+  });
+  // 浅层只读
+  test("should not print a warning message when operating on deep properties of a shallow read-only object", () => {
+    const readonlyObj = shadowReadonly({ foo: { bar: 1 } });
+    const spyWarn = vi.spyOn(console, "warn");
+
+    // 深层设置不触发只读拦截
+    readonlyObj.foo.bar = 2;
+    expect(spyWarn).toBeCalledTimes(0);
+    readonlyObj.foo = { bar: 2 };
+    expect(spyWarn).toBeCalledTimes(1);
   });
 });
