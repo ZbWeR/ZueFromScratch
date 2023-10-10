@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build.js",
     "dev": "node scripts/build.js -d",
-    "test": "vitest --ui"
+    "test": "vitest --ui --silent",
+    "demo": "vitest ./test/unit/devDemo.spec.ts"
   },
   "devDependencies": {
     "@rollup/plugin-replace": "^5.0.2",
