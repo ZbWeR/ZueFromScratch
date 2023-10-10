@@ -6,3 +6,7 @@ export interface watchOptions {
 export interface watchCallBackFunction {
   (newValue: any, oldValue: any, onInvalidate: (fn: () => void) => any): void;
 }
+
+export interface ArrayInstrumentations {
+  [method: string]: (this: { raw: any[] }, ...args: any[]) => any;
+}

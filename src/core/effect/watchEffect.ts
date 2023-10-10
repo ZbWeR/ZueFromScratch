@@ -41,7 +41,12 @@ export function track<T, K extends keyof T>(target: T, key: K | symbol) {
  * @param key - 原始对象的键
  * @param type - 触发事件的类型
  */
-export function trigger<T, K extends keyof T>(target: T, key: K, type?: TriggerType) {
+export function trigger<T, K extends keyof T>(
+  target: T,
+  key: K,
+  type?: TriggerType,
+  newVal?: any
+) {
   const depsMap = effectBucket.get(target);
   if (!depsMap) return;
   const effects = depsMap.get(key);
@@ -55,6 +60,26 @@ export function trigger<T, K extends keyof T>(target: T, key: K, type?: TriggerT
         effectToRun.add(fn);
       }
     });
+
+  //【数组】：当操作类型为增加元素时，应该触发与 length 相关的副作用
+  if (Array.isArray(target) && type === TriggerType.ADD) {
+    const lengthEffect = depsMap.get("length");
+    lengthEffect &&
+      lengthEffect.forEach((fn) => {
+        if (fn !== activeEffect) effectToRun.add(fn);
+      });
+  }
+
+  //【数组】：当 key 为 length 时，应该触发所有 index 大等于 newVal 的副作用
+  if (Array.isArray(target) && key === "length") {
+    depsMap.forEach((effects, index) => {
+      if (Number(index) >= newVal) {
+        effects.forEach((fn) => {
+          if (fn !== activeEffect) effectToRun.add(fn);
+        });
+      }
+    });
+  }
 
   // 【for...in...】只有删除/增加属性的操作才会触发
   if (type === TriggerType.ADD || type === TriggerType.DELETE) {

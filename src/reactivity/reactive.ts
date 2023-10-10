@@ -1,6 +1,7 @@
 import { TriggerType } from "types/watchEffect.js";
 import { track, trigger } from "../core/effect/watchEffect";
 import { warn, error } from "src/utils/debug";
+import { ArrayInstrumentations } from "types/reactivity";
 
 function handler<T extends object>(
   isShadow: boolean = false, // 浅响应只有第一层为响应式
@@ -9,11 +10,16 @@ function handler<T extends object>(
   return {
     // 拦截读取
     get(target: T, key: PropertyKey, receiver: any) {
+      // console.log("get: ", key);
+
       // 代理对象可以通过 raw 访问原始数据
       if (key === "raw") return target;
-
+      // 拦截数组查找方法
+      if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
+        return Reflect.get(arrayInstrumentations, key, receiver);
+      }
       // 收集副作用函数:只读属性不会触发副作用故不用收集
-      if (!isReadonly) track(target, key as keyof T);
+      if (!isReadonly && typeof key !== "symbol") track(target, key as keyof T);
       // 处理深浅响应
       const res = Reflect.get(target, key, receiver);
       if (isShadow) return res;
@@ -32,8 +38,15 @@ function handler<T extends object>(
       }
 
       const oldVal = target[key as keyof T];
+
       // 判断是修改属性值还是添加新的属性
-      const type = Object.prototype.hasOwnProperty.call(target, key)
+      const type = Array.isArray(target)
+        ? // 对于数组来说，索引大等于长度则为增加操作
+          Number(key) >= target.length
+          ? TriggerType.ADD
+          : TriggerType.SET
+        : // 对于普通对象来说，不存在该属性则为增加操作
+        Object.prototype.hasOwnProperty.call(target, key)
         ? TriggerType.SET
         : TriggerType.ADD;
       // 设置属性值
@@ -44,7 +57,8 @@ function handler<T extends object>(
       if (receiver.raw === target) {
         // 新旧不同才更新，注意特别处理 NaN === NaN -> false
         if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
-          trigger(target, key as keyof T, type);
+          // 第四个参数：【数组】通过length影响数组元素
+          trigger(target, key as keyof T, type, newVal);
         }
       }
 
@@ -77,11 +91,26 @@ function handler<T extends object>(
 
     // 拦截 for...in 操作
     ownKeys(target: T) {
-      track(target, Symbol("iterateKey"));
+      track(target, Array.isArray(target) ? ("length" as keyof T) : Symbol("iterateKey"));
       return Reflect.ownKeys(target);
     },
   };
 }
+
+/**
+ * 重写数组查找方法
+ */
+const arrayInstrumentations: ArrayInstrumentations = {};
+["includes", "indexOf", "lastIndexOf"].forEach((method) => {
+  const originMethod: Function = (Array.prototype as any)[method];
+  arrayInstrumentations[method] = function (...args) {
+    let res = originMethod.apply(this, args);
+    if (res === false || res === -1) {
+      res = originMethod.apply(this.raw, args);
+    }
+    return res;
+  };
+});
 
 /**
  * 创建响应式对象
@@ -107,8 +136,13 @@ function createReactive(
  * @param data - 原始对象
  * @returns 原值的响应式代理
  */
+const reactiveMap: Map<object, object> = new Map();
 export function reactive(data: any) {
-  return createReactive(data);
+  const existingProxy = reactiveMap.get(data);
+  if (existingProxy) return existingProxy;
+  const proxy = createReactive(data);
+  reactiveMap.set(data, proxy);
+  return proxy;
 }
 
 /**
