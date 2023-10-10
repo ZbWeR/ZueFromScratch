@@ -142,6 +142,96 @@ describe("reactive", () => {
   });
 });
 
+// 【数组】
+describe("reactive Array", () => {
+  // 索引对 length 属性的影响
+  test("should trigger effects when setting or adding elements through index in a reactive array", () => {
+    const arr = reactive([1, 2, 3]);
+    const getFirst = vi.fn(() => arr[0]);
+    const getLength = vi.fn(() => arr.length);
+    effect(getFirst);
+    effect(getLength);
+
+    // 通过索引设置元素属性
+    arr[0] = 4;
+    expect(getFirst).toBeCalledTimes(2);
+    // 通过索引增加元素个数，间接影响 length
+    arr[3] = 6;
+    expect(getLength).toBeCalledTimes(2);
+  });
+
+  // length 对元素的影响
+  test("should trigger effects for elements with index greater or equal to the new length when the new length is smaller than the old length", () => {
+    const arr = reactive([1, 2, 3, 4, 5, 6]);
+    const getFirst = vi.fn(() => arr[0]);
+    const getThird = vi.fn(() => arr[2]);
+    const getFourth = vi.fn(() => arr[3]);
+    effect(getFirst);
+    effect(getThird);
+    effect(getFourth);
+
+    arr.length = 2;
+    // 小于新长度的不被触发
+    expect(getFirst).toBeCalledTimes(1);
+    // 大等于新长度的被触发
+    expect(getThird).toBeCalledTimes(2);
+    expect(getFourth).toBeCalledTimes(2);
+  });
+  test("should not trigger effects for elements within the array when the new length is greater than the original length", () => {
+    const arr = reactive([1, 2, 3]);
+    const getSum = vi.fn(() => {
+      arr[0] + arr[1] + arr[2];
+    });
+    effect(getSum);
+
+    arr.length = 5;
+    expect(getSum).toBeCalledTimes(1);
+  });
+
+  // for...in 遍历
+  test("should trigger effects related to for...in when changing the array length through the length property", () => {
+    const arr = reactive([1, 2, 3]);
+    const effectFn = vi.fn(() => {
+      for (const key in arr) key;
+    });
+    effect(effectFn);
+
+    arr[3] = 4;
+    expect(effectFn).toBeCalledTimes(2);
+    arr.length = 5;
+    expect(effectFn).toBeCalledTimes(3);
+    arr.length = 0;
+    expect(effectFn).toBeCalledTimes(4);
+  });
+  // for..of 遍历
+  test("should trigger effects related to for...of when changing the array", () => {
+    const arr = reactive([1, 2, 3, 4]);
+    const effectFn = vi.fn(() => {
+      for (const val of arr) val;
+    });
+    effect(effectFn);
+
+    arr[0] = 2;
+    expect(effectFn).toBeCalledTimes(2);
+    arr.length = 5;
+    expect(effectFn).toBeCalledTimes(3);
+    arr.length = 0;
+    expect(effectFn).toBeCalledTimes(4);
+  });
+
+  // 数组查找方法
+  test("temp name", () => {
+    const obj = {};
+    const arr: Array<any> = reactive([obj, { foo: 1 }]);
+
+    expect(arr.includes(obj)).toBe(true);
+    expect(arr.includes(arr[0])).toBe(true);
+
+    expect(arr.indexOf(obj)).not.toBe(-1);
+    expect(arr.lastIndexOf(arr[0])).not.toBe(-1);
+  });
+});
+
 // 浅层代理测试
 describe("shadowReactive", () => {
   test("should not trigger effects when operations are performed on deep properties", () => {
