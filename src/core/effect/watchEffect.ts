@@ -1,4 +1,5 @@
 import { DepsMap, EffectFunction, EffectOptions, TriggerType } from "types/watchEffect";
+import { ArrayInstrumentations } from "types/reactivity";
 
 // 当前激活的副作用函数
 let activeEffect: EffectFunction | undefined;
@@ -15,7 +16,9 @@ const iterateBucket: WeakMap<any, symbol> = new WeakMap();
  * @param key - 原始对象的键, k 可以为 symbol 类型是为了兼容 for...in... 操作
  */
 export function track<T, K extends keyof T>(target: T, key: K | symbol) {
-  if (!activeEffect) return;
+  // 修改数组长度的原型方法禁止追踪 length 属性避免栈溢出
+  if (!activeEffect || !shouldTrack) return;
+  // console.log("track", target, key);
 
   // 【for...in...】记录对象 target 的可迭代键，以便后续调用
   if (typeof key === "symbol") iterateBucket.set(target, key);
@@ -105,14 +108,19 @@ export function trigger<T, K extends keyof T>(
  */
 export function effect(fn: Function, options: EffectOptions = {}): EffectFunction {
   const effectFn: EffectFunction = () => {
+    activeEffect = effectFn;
+    let lastShouldTrack = shouldTrack;
+    shouldTrack = true;
     // 清除依赖，避免分支切换时遗留的副作用函数干扰运行
     cleanup(effectFn);
-    activeEffect = effectFn;
+
     // 处理副作用函数嵌套
     effectStack.push(effectFn);
     const res = fn();
     effectStack.pop();
+
     activeEffect = effectStack[effectStack.length - 1];
+    shouldTrack = lastShouldTrack;
     return res;
   };
   effectFn.options = options;
@@ -133,3 +141,31 @@ function cleanup(fn: EffectFunction) {
   fn.deps.forEach((dep) => dep.delete(fn));
   fn.deps.length = 0;
 }
+
+export let shouldTrack = true;
+
+// 重写数组方法
+export const arrayInstrumentations: ArrayInstrumentations = {};
+
+// 重写查找方法
+["includes", "indexOf", "lastIndexOf"].forEach((method) => {
+  const originMethod: Function = (Array.prototype as any)[method];
+  arrayInstrumentations[method] = function (...args) {
+    let res = originMethod.apply(this, args);
+    if (res === false || res === -1) {
+      res = originMethod.apply(this.raw, args);
+    }
+    return res;
+  };
+});
+
+// 重写隐式修改数组长度的方法
+["push", "pop", "shift", "unshift", "splice"].forEach((method) => {
+  const originMethod: Function = (Array.prototype as any)[method];
+  arrayInstrumentations[method] = function (...args) {
+    shouldTrack = false;
+    const res = originMethod.apply(this, args);
+    shouldTrack = true;
+    return res;
+  };
+});

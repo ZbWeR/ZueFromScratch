@@ -1,7 +1,6 @@
 import { TriggerType } from "types/watchEffect.js";
-import { track, trigger } from "../core/effect/watchEffect";
+import { track, trigger, arrayInstrumentations } from "../core/effect/watchEffect";
 import { warn, error } from "src/utils/debug";
-import { ArrayInstrumentations } from "types/reactivity";
 
 function handler<T extends object>(
   isShadow: boolean = false, // 浅响应只有第一层为响应式
@@ -31,6 +30,7 @@ function handler<T extends object>(
 
     // 拦截设置操作，修改/新增
     set(target: T, key: PropertyKey, newVal: any, receiver: any) {
+      // console.log("set", target, key, newVal);
       // 只读数据拦截设置操作
       if (isReadonly) {
         warn(`属性 ${String(key)} 是只读的`, target);
@@ -96,21 +96,6 @@ function handler<T extends object>(
     },
   };
 }
-
-/**
- * 重写数组查找方法
- */
-const arrayInstrumentations: ArrayInstrumentations = {};
-["includes", "indexOf", "lastIndexOf"].forEach((method) => {
-  const originMethod: Function = (Array.prototype as any)[method];
-  arrayInstrumentations[method] = function (...args) {
-    let res = originMethod.apply(this, args);
-    if (res === false || res === -1) {
-      res = originMethod.apply(this.raw, args);
-    }
-    return res;
-  };
-});
 
 /**
  * 创建响应式对象
