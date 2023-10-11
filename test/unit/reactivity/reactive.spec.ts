@@ -158,6 +158,9 @@ describe("reactive Array", () => {
     // 通过索引增加元素个数，间接影响 length
     arr[3] = 6;
     expect(getLength).toBeCalledTimes(2);
+    // 通过原型方法
+    arr.push(233);
+    expect(getLength).toBeCalledTimes(3);
   });
 
   // length 对元素的影响
@@ -220,7 +223,7 @@ describe("reactive Array", () => {
   });
 
   // 数组查找方法
-  test("temp name", () => {
+  test("should return consistent results when calling array find methods, whether passing in original data or proxy data as parameters", () => {
     const obj = {};
     const arr: Array<any> = reactive([obj, { foo: 1 }]);
 
@@ -229,6 +232,14 @@ describe("reactive Array", () => {
 
     expect(arr.indexOf(obj)).not.toBe(-1);
     expect(arr.lastIndexOf(arr[0])).not.toBe(-1);
+  });
+
+  // 隐式修改数组长度的方法
+  test("should not cause stack overflow with two independent push effect functions", () => {
+    const arr: number[] = reactive([1, 2, 3]);
+
+    effect(() => arr.push(1));
+    expect(effect(() => arr.push(1))).not.toThrowError();
   });
 });
 
