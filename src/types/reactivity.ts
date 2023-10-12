@@ -10,3 +10,7 @@ export interface watchCallBackFunction {
 export interface ArrayInstrumentations {
   [method: string]: (this: { raw: any[] }, ...args: any[]) => any;
 }
+
+export interface Ref<T = any> {
+  value: T;
+}
