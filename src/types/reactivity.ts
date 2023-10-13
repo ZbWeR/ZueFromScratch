@@ -11,6 +11,7 @@ export interface ArrayInstrumentations {
   [method: string]: (this: { raw: any[] }, ...args: any[]) => any;
 }
 
-export interface Ref<T = any> {
+export type RefObj<T = any> = {
   value: T;
-}
+  __z_isRef?: boolean;
+};
