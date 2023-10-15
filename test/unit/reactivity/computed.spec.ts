@@ -33,6 +33,7 @@ describe("Computed", () => {
     sumRes.value;
     sumRes.value;
     expect(sumFun).toBeCalledTimes(2);
+    expect(sumRes.value).toBe(4);
   });
   // 测试在 effect 中调用
   test("should call the function when its value accessed in a effectFunction", () => {

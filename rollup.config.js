@@ -47,7 +47,7 @@ function createConfig(format, output) {
   const isBrowserBuild = format in ["global", "esm-browser"];
 
   // 入口文件配置
-  let entryFile = resolve("src/reactivity/index.ts");
+  let entryFile = resolve("src/index.ts");
   // 导出文件名调整
   if (isProductionBuild) output.file = output.file.replace(".js", ".prod.js");
 

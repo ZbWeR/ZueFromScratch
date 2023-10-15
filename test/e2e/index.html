@@ -11,11 +11,20 @@
         hi();
     </script> -->
     <!-- iife 格式 -->
-    <script src="../../dist/zue.global.prod.js"></script>
-    <script>
-        zue.hi();
-    </script>
+    <script src="/dist/zue.global.js"></script>
 </head>
 <body>
+    <div id="app"></div>
 </body>
 </html>
+
+<script>
+    const { effect , ref} = zue;
+    function renderer(domString,container){
+        container.innerHTML = domString;
+    }
+    const count = ref('喵喵喵');
+    effect(()=>{
+        renderer(`<h1>${count.value}</h1>`,document.getElementById('app'))
+    })
+</script>

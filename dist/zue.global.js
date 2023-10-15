@@ -22,8 +22,10 @@ var zue = (function (exports) {
    * @param key - 原始对象的键, k 可以为 symbol 类型是为了兼容 for...in... 操作
    */
   function track(target, key) {
-      if (!activeEffect)
+      // 修改数组长度的原型方法禁止追踪 length 属性避免栈溢出
+      if (!activeEffect || !exports.shouldTrack)
           return;
+      // console.log("track", target, key);
       // 【for...in...】记录对象 target 的可迭代键，以便后续调用
       if (typeof key === "symbol")
           iterateBucket.set(target, key);
@@ -46,7 +48,7 @@ var zue = (function (exports) {
    * @param key - 原始对象的键
    * @param type - 触发事件的类型
    */
-  function trigger(target, key, type) {
+  function trigger(target, key, type, newVal) {
       var _a;
       const depsMap = effectBucket.get(target);
       if (!depsMap)
@@ -61,6 +63,26 @@ var zue = (function (exports) {
                   effectToRun.add(fn);
               }
           });
+      //【数组】：当操作类型为增加元素时，应该触发与 length 相关的副作用
+      if (Array.isArray(target) && type === TriggerType.ADD) {
+          const lengthEffect = depsMap.get("length");
+          lengthEffect &&
+              lengthEffect.forEach((fn) => {
+                  if (fn !== activeEffect)
+                      effectToRun.add(fn);
+              });
+      }
+      //【数组】：当 key 为 length 时，应该触发所有 index 大等于 newVal 的副作用
+      if (Array.isArray(target) && key === "length") {
+          depsMap.forEach((effects, index) => {
+              if (Number(index) >= newVal) {
+                  effects.forEach((fn) => {
+                      if (fn !== activeEffect)
+                          effectToRun.add(fn);
+                  });
+              }
+          });
+      }
       // 【for...in...】只有删除/增加属性的操作才会触发
       if (type === TriggerType.ADD || type === TriggerType.DELETE) {
           const iterateKey = iterateBucket.get(target);
@@ -86,14 +108,17 @@ var zue = (function (exports) {
    */
   function effect(fn, options = {}) {
       const effectFn = () => {
+          activeEffect = effectFn;
+          let lastShouldTrack = exports.shouldTrack;
+          exports.shouldTrack = true;
           // 清除依赖，避免分支切换时遗留的副作用函数干扰运行
           cleanup(effectFn);
-          activeEffect = effectFn;
           // 处理副作用函数嵌套
           effectStack.push(effectFn);
           const res = fn();
           effectStack.pop();
           activeEffect = effectStack[effectStack.length - 1];
+          exports.shouldTrack = lastShouldTrack;
           return res;
       };
       effectFn.options = options;
@@ -113,6 +138,30 @@ var zue = (function (exports) {
       fn.deps.forEach((dep) => dep.delete(fn));
       fn.deps.length = 0;
   }
+  exports.shouldTrack = true;
+  // 重写数组方法
+  const arrayInstrumentations = {};
+  // 重写查找方法
+  ["includes", "indexOf", "lastIndexOf"].forEach((method) => {
+      const originMethod = Array.prototype[method];
+      arrayInstrumentations[method] = function (...args) {
+          let res = originMethod.apply(this, args);
+          if (res === false || res === -1) {
+              res = originMethod.apply(this.raw, args);
+          }
+          return res;
+      };
+  });
+  // 重写隐式修改数组长度的方法
+  ["push", "pop", "shift", "unshift", "splice"].forEach((method) => {
+      const originMethod = Array.prototype[method];
+      arrayInstrumentations[method] = function (...args) {
+          exports.shouldTrack = false;
+          const res = originMethod.apply(this, args);
+          exports.shouldTrack = true;
+          return res;
+      };
+  });
 
   function warn(message, source) {
       {
@@ -131,11 +180,16 @@ var zue = (function (exports) {
       return {
           // 拦截读取
           get(target, key, receiver) {
+              // console.log("get: ", key);
               // 代理对象可以通过 raw 访问原始数据
               if (key === "raw")
                   return target;
+              // 拦截数组查找方法
+              if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
+                  return Reflect.get(arrayInstrumentations, key, receiver);
+              }
               // 收集副作用函数:只读属性不会触发副作用故不用收集
-              if (!isReadonly)
+              if (!isReadonly && typeof key !== "symbol")
                   track(target, key);
               // 处理深浅响应
               const res = Reflect.get(target, key, receiver);
@@ -148,6 +202,7 @@ var zue = (function (exports) {
           },
           // 拦截设置操作，修改/新增
           set(target, key, newVal, receiver) {
+              // console.log("set", target, key, newVal);
               // 只读数据拦截设置操作
               if (isReadonly) {
                   warn(`属性 ${String(key)} 是只读的`, target);
@@ -155,9 +210,15 @@ var zue = (function (exports) {
               }
               const oldVal = target[key];
               // 判断是修改属性值还是添加新的属性
-              const type = Object.prototype.hasOwnProperty.call(target, key)
-                  ? TriggerType.SET
-                  : TriggerType.ADD;
+              const type = Array.isArray(target)
+                  ? // 对于数组来说，索引大等于长度则为增加操作
+                      Number(key) >= target.length
+                          ? TriggerType.ADD
+                          : TriggerType.SET
+                  : // 对于普通对象来说，不存在该属性则为增加操作
+                      Object.prototype.hasOwnProperty.call(target, key)
+                          ? TriggerType.SET
+                          : TriggerType.ADD;
               // 设置属性值
               const res = Reflect.set(target, key, newVal, receiver);
               //  触发副作用函数
@@ -165,7 +226,8 @@ var zue = (function (exports) {
               if (receiver.raw === target) {
                   // 新旧不同才更新，注意特别处理 NaN === NaN -> false
                   if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
-                      trigger(target, key, type);
+                      // 第四个参数：【数组】通过length影响数组元素
+                      trigger(target, key, type, newVal);
                   }
               }
               return res;
@@ -193,7 +255,7 @@ var zue = (function (exports) {
           },
           // 拦截 for...in 操作
           ownKeys(target) {
-              track(target, Symbol("iterateKey"));
+              track(target, Array.isArray(target) ? "length" : Symbol("iterateKey"));
               return Reflect.ownKeys(target);
           },
       };
@@ -217,8 +279,14 @@ var zue = (function (exports) {
    * @param data - 原始对象
    * @returns 原值的响应式代理
    */
+  const reactiveMap = new Map();
   function reactive(data) {
-      return createReactive(data);
+      const existingProxy = reactiveMap.get(data);
+      if (existingProxy)
+          return existingProxy;
+      const proxy = createReactive(data);
+      reactiveMap.set(data, proxy);
+      return proxy;
   }
   /**
    * 创建一个浅层响应式对象，避免深层次的转换行为
@@ -343,11 +411,86 @@ var zue = (function (exports) {
       }
   }
 
+  /**
+   * 创建一个可以代理原始值的响应式对象
+   * @param val - 目标值
+   */
+  function ref(val) {
+      const wrapper = {
+          value: val,
+      };
+      // 区分 ref 与普通对象
+      Object.defineProperty(wrapper, "__z_isRef", {
+          value: true,
+      });
+      return reactive(wrapper);
+  }
+  /**
+   * 创建一个基于响应式对象的能够保留响应式能力的属性
+   * @param obj - 目标响应式对象
+   * @param key - 目标键
+   */
+  function toRef(obj, key) {
+      const wrapper = {
+          get value() {
+              return obj[key];
+          },
+          set value(val) {
+              obj[key] = val;
+          },
+      };
+      Object.defineProperty(wrapper, "__z_isRef", {
+          value: true,
+      });
+      return wrapper;
+  }
+  /**
+   * 创建一个响应式对象的引用，使其所有键都能够保持响应式能力。
+   * @param obj - 目标响应式对象
+   */
+  function toRefs(obj) {
+      const ret = {};
+      for (const key in obj) {
+          ret[key] = toRef(obj, key);
+      }
+      return ret;
+  }
+  /**
+   * 创建一个代理对象，实现自动脱 ref
+   * @param target - 目标对象
+   */
+  function proxyRefs(target) {
+      return new Proxy(target, {
+          // 如果是 ref 就返回 .value
+          get(target, key, receiver) {
+              const value = Reflect.get(target, key, receiver);
+              return value && value.__z_isRef ? value.value : value;
+          },
+          // 如果是 ref 就设置 .value
+          set(target, key, newVal, receiver) {
+              const value = target[key];
+              if (value && value.__z_isRef) {
+                  value.value = newVal;
+                  return true;
+              }
+              return Reflect.set(target, key, newVal, receiver);
+          },
+      });
+  }
+
+  exports.arrayInstrumentations = arrayInstrumentations;
   exports.computed = computed;
+  exports.effect = effect;
+  exports.proxyRefs = proxyRefs;
   exports.reactive = reactive;
   exports.readonly = readonly;
+  exports.ref = ref;
   exports.shadowReactive = shadowReactive;
   exports.shadowReadonly = shadowReadonly;
+  exports.toRef = toRef;
+  exports.toRefs = toRefs;
+  exports.track = track;
+  exports.trigger = trigger;
   exports.watch = watch;
 
   return exports;
