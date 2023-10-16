@@ -1,7 +1,7 @@
 import { VNode, Container, RendererOptions } from "types/renderer";
-import { normalizeClass } from "./utils";
+import { patchProps } from "./patch";
 
-const rendererOptions: RendererOptions = {
+const defaultRendererOptions: RendererOptions = {
   // 创建元素
   createElement: (tag: string) => {
     return document.createElement(tag);
@@ -15,40 +15,13 @@ const rendererOptions: RendererOptions = {
     el.textContent = text;
   },
   // 设置元素属性
-  patchProps: (el: Container, key: string, prevValue: any, nextValue: any) => {
-    // 对 class 进行特殊处理
-    if (key === "class") {
-      el.className = normalizeClass(nextValue) || "";
-    }
-
-    // TODO: 对 style 进行特殊优化
-
-    // 普通属性处理
-    else if (shouldSetAsDOMProps(el, key)) {
-      const type = typeof el[key as keyof HTMLElement];
-      if (type === "boolean" && nextValue === "") (el as any)[key] = true;
-      else (el as any)[key] = nextValue;
-    } else {
-      el.setAttribute(key, nextValue);
-    }
-  },
+  patchProps,
 };
 
-// const rendererOptions: RendererOptions = {
-//   createElement: (tag: string) => {
-//     console.log(`创建元素 ${tag}`);
-//     return { tag };
-//   },
-//   insert: (el: any, parent: any, anchor = null) => {
-//     console.log(`将元素 ${JSON.stringify(el)} 添加到 ${JSON.stringify(parent)} 下`);
-//   },
-//   setElementText: (el: any, text: string) => {
-//     console.log(`设置 ${JSON.stringify(el)} 的文本内容: ${text}`);
-//   },
-// };
-
 // 创建一个渲染器
-export function createRenderer(options: RendererOptions = rendererOptions) {
+export function createRenderer(userOptions?: RendererOptions) {
+  // options with defaults
+  const options = { ...defaultRendererOptions, ...userOptions };
   const { createElement, insert, setElementText, patchProps } = options;
 
   function render(vnode: VNode, container: Container) {
@@ -56,26 +29,50 @@ export function createRenderer(options: RendererOptions = rendererOptions) {
       // 新旧 vnode 同时传递给 patch 进行打补丁
       patch(container._vnode, vnode, container);
     } else {
-      // 旧 vnode 存在而新 vnode 不存在说明是卸载操作
-      if (container._vnode) container.innerHTML = "";
+      // 旧 vnode 存在而新 vnode 不存在说明是【卸载】操作
+      if (container._vnode) {
+        unmount(container._vnode);
+      }
     }
     container._vnode = vnode;
   }
 
-  // 打补丁
+  /**
+   * 比较新旧两个虚拟节点差异，根据差异更新真实 DOM
+   * @param oldVnode - VNode 旧值
+   * @param newVnode - VNode 新值
+   * @param container - 父元素容器
+   */
   function patch(oldVnode: VNode | undefined, newVnode: VNode, container: Container) {
-    // 挂载
-    if (!oldVnode) {
-      mountElement(newVnode, container);
-    } else {
-      // TODO: 更新
+    if (oldVnode && oldVnode.type !== newVnode.type) {
+      unmount(oldVnode);
+      oldVnode = undefined;
+    }
+    const { type } = newVnode;
+
+    // 普通标签元素
+    if (type === "string") {
+      if (!oldVnode) {
+        mountElement(newVnode, container);
+      } else {
+        // TODO: 更新
+        // patchElement(oldVnode, newVnode);
+      }
+    }
+    // TODO:组件元素
+    else if (type === "object") {
+      console.log("【组件】类型的虚拟节点尚未处理");
     }
   }
 
-  // 将 vnode 挂载到容器中
+  /**
+   * 将虚拟节点转换为真实 DOM 并将其插入到父元素中
+   * @param vnode - VNode
+   * @param container - 父元素容器
+   */
   function mountElement(vnode: VNode, container: Container) {
-    // 【创建】
-    const el = createElement(vnode.type);
+    // 【创建】并记录虚拟节点对应的真实 DOM
+    const el = (vnode.el = createElement(vnode.type));
 
     // 【设置】
     if (typeof vnode.children === "string") {
@@ -96,6 +93,16 @@ export function createRenderer(options: RendererOptions = rendererOptions) {
     insert(el, container, null);
   }
 
+  /**
+   * 将虚拟节点从真实DOM中卸载
+   * @param vnode - VNode
+   */
+  function unmount(vnode: VNode) {
+    const el = vnode.el;
+    const parent = el?.parentNode;
+    parent && parent.removeChild(el);
+  }
+
   // 通常用于服务端渲染
   function hydrate(vnode: VNode, container: Container) {}
 
@@ -103,16 +110,4 @@ export function createRenderer(options: RendererOptions = rendererOptions) {
     render,
     hydrate,
   };
-}
-
-/**
- * 判断某个属性能否以 DOM 的形式进行设置
- * @param el - 目标 DOM
- * @param key - 目标属性名称
- * @param val - 属性值
- */
-function shouldSetAsDOMProps(el: Container, key: string): boolean {
-  // 处理【只读】类型的 DOM Property
-  if (key === "form" && el.tagName === "INPUT") return false;
-  return key in el;
 }

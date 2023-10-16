@@ -1,12 +1,19 @@
 export interface VNode {
   type: string;
-  props?: { [key: string]: any };
   children: string | VNode[];
+  props?: { [key: string]: any };
+  el?: Container; // 对应的真实 DOM ,便于卸载操作
+}
+
+export interface Invoker extends Function {
+  (e: Event): any;
+  value?: (e: Event) => any;
+  attached?: number;
 }
 
 export interface Container extends HTMLElement {
   _vnode?: VNode;
-  _invokers?: object;
+  _invokers?: { [key: string]: Invoker }; // 事件处理函数,用于处理事件绑定
 }
 
 export interface RendererOptions {
