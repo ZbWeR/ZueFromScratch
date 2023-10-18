@@ -1,6 +1,13 @@
 import { normalizeClass } from "./utils";
 import { Container } from "types/renderer";
 
+/**
+ * 更新属性
+ * @param el - 真实 DOM
+ * @param key - 属性名称
+ * @param prevValue - 旧的属性值
+ * @param nextValue - 新的属性值
+ */
 export function patchProps(el: Container, key: string, prevValue: any, nextValue: any) {
   // 事件
   if (/^on/.test(key)) {
