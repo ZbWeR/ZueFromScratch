@@ -1,6 +1,7 @@
 import { VNode, Container, RendererOptions } from "types/renderer";
+import { Text, Fragment } from "./VNode";
 import { patchProps } from "./patch";
-import { defaultRendererOptions, Text, Fragment } from "./default";
+import { defaultRendererOptions } from "./default";
 import { getLISIndex } from "./utils";
 
 // 创建一个渲染器
@@ -193,7 +194,6 @@ export function createRenderer(userOptions?: RendererOptions) {
     else if (prevIndex <= oldEnd) {
       // 1.构造 source
       const count: number = newEnd - prevIndex + 1;
-      if (count <= 0) return;
       const source: number[] = new Array(count).fill(-1);
 
       // 2.构造索引表
@@ -210,8 +210,7 @@ export function createRenderer(userOptions?: RendererOptions) {
       let patched = 0;
       for (let i = oldStart; i <= oldEnd; i++) {
         oldVNode = oldChildren[i];
-
-        if (patched <= count) {
+        if (patched < count) {
           const k = keyIndex[oldVNode.key];
           // 在索引表中存在说明没有被移除
           if (k !== undefined) {

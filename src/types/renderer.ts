@@ -1,6 +1,6 @@
 export interface VNode {
   type: string | symbol;
-  children: string | VNode[];
+  children: string | VNode[] | null;
   props?: { [key: string]: any };
   el?: Container; // 对应的真实 DOM ,便于卸载操作
   key?: any; // 便于 diff 比较

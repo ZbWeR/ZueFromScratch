@@ -17,7 +17,3 @@ export const defaultRendererOptions: RendererOptions = {
     el.nodeValue = text;
   },
 };
-
-export const Text: symbol = Symbol();
-export const Comment: symbol = Symbol();
-export const Fragment: symbol = Symbol();
