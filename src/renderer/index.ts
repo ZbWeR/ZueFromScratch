@@ -121,7 +121,6 @@ export function createRenderer(userOptions?: RendererOptions) {
     else if (Array.isArray(n2.children)) {
       // 旧节点也为数组则进行 diff 比较
       if (Array.isArray(n1.children)) {
-        //TODO: diff 算法
         fastDiff(n1, n2, container);
       }
       // 旧节点为空或者文本类型直接置空，随后依次挂载
@@ -149,7 +148,6 @@ export function createRenderer(userOptions?: RendererOptions) {
     const oldChildren = n1.children as VNode[];
     const newChildren = n2.children as VNode[];
 
-    // ? 重复更新，当所有 key 都一致时
     // 更新相同的前置节点
     let prevIndex: number = 0;
     let oldEnd: number = oldChildren.length - 1;
@@ -172,8 +170,6 @@ export function createRenderer(userOptions?: RendererOptions) {
       oldVNode = oldChildren[--oldEnd];
       newVNode = newChildren[--newEnd];
     }
-
-    // console.log(prevIndex, oldEnd, newEnd);
 
     // 新VNode剩余：挂载
     if (prevIndex <= newEnd && prevIndex > oldEnd) {
@@ -263,6 +259,88 @@ export function createRenderer(userOptions?: RendererOptions) {
   }
 
   /**
+   * Vue2.x 的双端 diff 算法
+   */
+  // function v2Diff(n1: VNode, n2: VNode, container: Container | null) {
+  //   const oldChildren = n1.children as VNode[];
+  //   const newChildren = n2.children as VNode[];
+  //   const visited = Symbol("visited");
+  //   // 四个索引值
+  //   let oldStartIdx = 0,
+  //     oldEndIdx = oldChildren.length - 1,
+  //     newStartIdx = 0,
+  //     newEndIdx = newChildren.length - 1;
+  //   // 对应的 vnode 节点
+  //   let oldStartVNode = oldChildren[oldStartIdx],
+  //     oldEndVNode = oldChildren[oldEndIdx],
+  //     newStartVNode = newChildren[newStartIdx],
+  //     newEndVNode = newChildren[newEndIdx];
+
+  //   while (newStartIdx <= newEndIdx && oldStartIdx <= oldEndIdx) {
+  //     // 跳过已处理节点
+  //     if (oldStartVNode.key === visited) {
+  //       oldStartVNode = oldChildren[++oldStartIdx];
+  //       continue;
+  //     }
+  //     if (oldEndVNode.key === visited) {
+  //       oldEndVNode = oldChildren[--oldEndIdx];
+  //       continue;
+  //     }
+
+  //     // 比较
+  //     if (oldStartVNode.key === newStartVNode.key) {
+  //       // 头头比较
+  //       patch(oldStartVNode, newStartVNode, container);
+  //       oldStartVNode = oldChildren[++oldStartIdx];
+  //       newStartVNode = newChildren[++newStartIdx];
+  //     }
+  //     // 尾尾比较
+  //     else if (oldEndVNode.key === newEndVNode.key) {
+  //       patch(oldEndVNode, newEndVNode, container);
+  //       oldEndVNode = oldChildren[--oldEndIdx];
+  //       newEndVNode = newChildren[--newEndIdx];
+  //     }
+  //     // 头尾比较
+  //     else if (oldStartVNode.key === newEndVNode.key) {
+  //       patch(oldStartVNode, newEndVNode, container);
+  //       insert(oldStartVNode.el, container, oldEndVNode.el?.nextSibling);
+  //       oldStartVNode = oldChildren[++oldStartIdx];
+  //       newEndVNode = newChildren[--newEndIdx];
+  //     }
+  //     // 尾头比较
+  //     else if (oldEndVNode.key === newStartVNode.key) {
+  //       patch(oldEndVNode, newStartVNode, container);
+  //       insert(oldEndVNode.el, container, oldStartVNode.el);
+  //       oldEndVNode = oldChildren[--oldEndIdx];
+  //       newStartVNode = newChildren[++newStartIdx];
+  //     }
+  //     // 非理想状况
+  //     else {
+  //       const idxInOld = oldChildren.findIndex((node) => node.key === newStartVNode.key);
+  //       if (idxInOld > 0) {
+  //         const VNodeToMove = oldChildren[idxInOld];
+  //         patch(VNodeToMove, newStartVNode, container);
+  //         insert(VNodeToMove.el, container, oldStartVNode.el);
+  //         oldChildren[idxInOld].key = visited; // 标记已访问
+  //       } else patch(null, newStartVNode, container, oldStartVNode.el);
+  //       newStartVNode = newChildren[++newStartIdx];
+  //     }
+  //   }
+
+  //   // 添加新的节点
+  //   if (newStartIdx <= newEndIdx) {
+  //     for (let i = newStartIdx; i <= newEndIdx; i++)
+  //       patch(null, newChildren[i], container, oldStartVNode?.el || null);
+  //   }
+  //   // 卸载旧的节点
+  //   if (oldStartIdx <= oldEndIdx) {
+  //     for (let i = oldStartIdx; i <= oldEndIdx; i++) {
+  //       unmount(oldChildren[i]);
+  //     }
+  //   }
+  // }
+
+  /**
    * 将虚拟节点转换为真实 DOM 并将其插入到父元素中
    * @param vnode - VNode
    * @param container - 父元素容器
@@ -282,7 +360,7 @@ export function createRenderer(userOptions?: RendererOptions) {
     }
     // 如果 children 是数组则遍历每一个子节点并调用 patch 挂载.
     else if (Array.isArray(vnode.children)) {
-      vnode.children.forEach((child) => patch(undefined, child, el));
+      vnode.children.forEach((child) => patch(null, child, el));
     }
     // 设置属性
     if (vnode.props) {
