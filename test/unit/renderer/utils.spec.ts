@@ -1,5 +1,5 @@
 import { expect, describe, test } from "vitest";
-import { getLISIndex, normalizeClass } from "../../../src/renderer/utils";
+import { getLISIndex, normalizeClass } from "../../../src/renderer/render_helper";
 
 describe("renderer Utils", () => {
   // 最长递增子序列
