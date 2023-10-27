@@ -1,4 +1,5 @@
 import { Comment, Text, Fragment } from "../../../src/renderer/VNode";
+import { ComponentOptions, VNode } from "../../../src/types/renderer";
 
 export const nodesMap = {
   // 年轻人的第一次挂载
@@ -209,5 +210,40 @@ export const nodesMap = {
         { type: "ul", children: null },
       ],
     },
+  },
+};
+
+const MyComponent: ComponentOptions = {
+  props: {
+    title: String,
+  },
+  data() {
+    return {
+      count: 1,
+    };
+  },
+  methods: {
+    add() {
+      console.log("喵喵喵");
+    },
+  },
+  render() {
+    return {
+      type: "div",
+      children: `count is: ${this.count}`,
+      props: {
+        onClick: () => {
+          this.count++;
+        },
+      },
+    };
+  },
+};
+
+export const componentNode: VNode = {
+  type: MyComponent,
+  children: null,
+  props: {
+    title: "A big Title",
   },
 };

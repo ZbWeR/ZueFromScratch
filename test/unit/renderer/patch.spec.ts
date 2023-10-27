@@ -2,7 +2,7 @@
 
 import { expect, describe, test, beforeAll, vi } from "vitest";
 import { createRenderer } from "../../../src/renderer/index";
-import { nodesMap } from "./data";
+import { nodesMap, componentNode } from "./data";
 
 describe("createRenderer", () => {
   let renderer: ReturnType<typeof createRenderer>;
@@ -174,4 +174,25 @@ describe("createRenderer", () => {
   });
 
   // TODO: 事件更新时机
+});
+
+// TODO: 测试组件挂载与更新，生命周期等等
+describe("createRenderer of Components", () => {
+  let renderer: ReturnType<typeof createRenderer>;
+  beforeAll(() => {
+    renderer = createRenderer();
+  });
+
+  // test("temp", () => {
+  //   const div = document.createElement("div");
+  //   const tmpNode = { ...componentNode };
+
+  //   renderer.render(tmpNode, div);
+  //   expect(div.textContent).toBe("count is: 1");
+
+  //   let myComponent: any = div.firstElementChild;
+  //   myComponent.dispatchEvent(new MouseEvent("click"));
+
+  //   expect(div.textContent).toBe("count is: 1");
+  // });
 });

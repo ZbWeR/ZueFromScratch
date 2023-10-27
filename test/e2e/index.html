@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
     <!-- ESM 格式 -->
     <!-- <script type="module">
@@ -12,19 +12,49 @@
     </script> -->
     <!-- iife 格式 -->
     <script src="/dist/zue.global.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div id="app"></div>
-</body>
+  </body>
 </html>
 
 <script>
-    const { effect , ref} = zue;
-    function renderer(domString,container){
-        container.innerHTML = domString;
-    }
-    const count = ref('喵喵喵');
-    effect(()=>{
-        renderer(`<h1>${count.value}</h1>`,document.getElementById('app'))
-    })
+  const app = document.querySelector("#app");
+  const renderer = zue.createRenderer();
+
+  const MyComponent = {
+    props: {
+      title: String,
+    },
+    data() {
+      return {
+        count: 1,
+      };
+    },
+    methods: {
+      add() {
+        console.log("喵喵喵");
+      },
+    },
+    render() {
+      return {
+        type: "div",
+        children: `count is: ${this.count}`,
+        props: {
+          onClick: () => {
+            this.count++;
+          },
+        },
+      };
+    },
+  };
+  const VNode = {
+    type: MyComponent,
+    children: null,
+    props: {
+      title: "A big Title",
+    },
+  };
+
+  renderer.render(VNode, app);
 </script>
