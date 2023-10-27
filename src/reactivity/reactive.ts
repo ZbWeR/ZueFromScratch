@@ -1,9 +1,9 @@
 import { TriggerType } from "types/watchEffect.js";
 import { track, trigger, arrayInstrumentations } from "../core/effect/watchEffect";
-import { warn, error } from "src/utils/debug";
+import { warn, error } from "../utils/debug";
 
 function handler<T extends object>(
-  isShadow: boolean = false, // 浅响应只有第一层为响应式
+  isShallow: boolean = false, // 浅响应只有第一层为响应式
   isReadonly: boolean = false // 只读数据
 ): ProxyHandler<T> {
   return {
@@ -21,7 +21,7 @@ function handler<T extends object>(
       if (!isReadonly && typeof key !== "symbol") track(target, key as keyof T);
       // 处理深浅响应
       const res = Reflect.get(target, key, receiver);
-      if (isShadow) return res;
+      if (isShallow) return res;
       if (typeof res === "object" && res !== null) {
         return isReadonly ? readonly(res) : reactive(res);
       }
@@ -100,20 +100,20 @@ function handler<T extends object>(
 /**
  * 创建响应式对象
  * @param data - 原始对象
- * @param isShadow - 浅层响应
+ * @param isShallow - 浅层响应
  * @param isReadonly - 只读属性
  * @returns 原始值的代理对象
  */
 function createReactive(
   data: any,
-  isShadow: boolean = false,
+  isShallow: boolean = false,
   isReadonly: boolean = false
 ) {
   if (typeof data !== "object" || data === null) {
     error(`${data} must be an object`, "createReactive");
     return data;
   }
-  return new Proxy(data, handler<any>(isShadow, isReadonly));
+  return new Proxy(data, handler<any>(isShallow, isReadonly));
 }
 
 /**
@@ -135,7 +135,7 @@ export function reactive(data: any) {
  * @param data - 原始对象
  * @returns 原值的浅层响应式代理
  */
-export function shadowReactive(data: any) {
+export function shallowReactive(data: any) {
   return createReactive(data, true);
 }
 
@@ -153,6 +153,6 @@ export function readonly(data: any) {
  * @param data - 原始对象
  * @returns 原值的浅层只读代理
  */
-export function shadowReadonly(data: any) {
+export function shallowReadonly(data: any) {
   return createReactive(data, true, true);
 }

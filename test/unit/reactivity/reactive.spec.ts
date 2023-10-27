@@ -2,9 +2,9 @@ import { test, vi, expect, describe } from "vitest";
 
 import {
   reactive,
-  shadowReactive,
+  shallowReactive,
   readonly,
-  shadowReadonly,
+  shallowReadonly,
 } from "../../../src/reactivity/reactive";
 import { effect } from "../../../src/core/effect/watchEffect";
 
@@ -244,9 +244,9 @@ describe("reactive Array", () => {
 });
 
 // 浅层代理测试
-describe("shadowReactive", () => {
+describe("shallowReactive", () => {
   test("should not trigger effects when operations are performed on deep properties", () => {
-    const reactiveObj = shadowReactive({ foo: { bar: 1 }, val: 2 });
+    const reactiveObj = shallowReactive({ foo: { bar: 1 }, val: 2 });
     const getBar = vi.fn(() => reactiveObj.foo.bar);
     const getVal = vi.fn(() => reactiveObj.val);
     effect(getBar);
@@ -279,7 +279,7 @@ describe("readonly", () => {
   });
   // 浅层只读
   test("should not print a warning message when operating on deep properties of a shallow read-only object", () => {
-    const readonlyObj = shadowReadonly({ foo: { bar: 1 } });
+    const readonlyObj = shallowReadonly({ foo: { bar: 1 } });
     const spyWarn = vi.spyOn(console, "warn");
 
     // 深层设置不触发只读拦截
