@@ -1,8 +1,26 @@
-import { VNode, Container, RendererOptions } from "types/renderer";
+/**
+ * TODO: slot插槽 emit事件
+ */
+
+import {
+  VNode,
+  Container,
+  RendererOptions,
+  ComponentOptions,
+  ComponentInstance,
+} from "types/renderer";
 import { Text, Fragment } from "./VNode";
-import { patchProps } from "./patch";
+import {
+  patchProps,
+  getLISIndex,
+  queueJob,
+  resolveProps,
+  hasPropsChanged,
+  resolveOptions,
+} from "./render_helper";
 import { defaultRendererOptions } from "./default";
-import { getLISIndex } from "./utils";
+import { reactive, shallowReactive } from "../reactivity/index";
+import { effect } from "../core/effect/index";
 
 // 创建一个渲染器
 export function createRenderer(userOptions?: RendererOptions) {
@@ -74,9 +92,10 @@ export function createRenderer(userOptions?: RendererOptions) {
         (<VNode[]>newVnode.children).forEach((c) => patch(null, c, container));
       else patchChildren(oldVnode, newVnode, container);
     }
-    // TODO:组件元素
+    // 处理组件
     else if (typeof type === "object") {
-      console.log("【组件】类型的虚拟节点尚未处理");
+      if (!oldVnode) mountComponent(newVnode, container, anchor);
+      else patchComponent(oldVnode, newVnode, anchor);
     }
   }
 
@@ -339,6 +358,137 @@ export function createRenderer(userOptions?: RendererOptions) {
   //     }
   //   }
   // }
+
+  /**
+   * 挂载组件
+   * @param vnode - VNode
+   * @param container - 父元素容器
+   * @param anchor - 插入锚点
+   */
+  function mountComponent(
+    vnode: VNode,
+    container: Container | null,
+    anchor: Container | null
+  ) {
+    // 获取组件的选项对象，通常包含一个返回值为虚拟 DOM 的渲染函数
+    const componentOptions = vnode.type as ComponentOptions;
+
+    const {
+      render,
+      data,
+      props: propsOptions,
+
+      // 生命周期
+      beforeCreate,
+      created,
+      beforeMount,
+      mounted,
+      beforeUpdate,
+      updated,
+    } = componentOptions;
+
+    // 【生命周期】数据观测前
+    beforeCreate && beforeCreate();
+
+    // 获取自身状态数据与传递的 props
+    const state = data ? reactive(data()) : null;
+    const [props, attrs] = resolveProps(propsOptions, vnode.props);
+
+    const instance: ComponentInstance = {
+      state,
+      props: shallowReactive(props),
+      isMounted: false,
+      subTree: null,
+      proxy: null,
+    };
+    vnode.component = instance;
+
+    // 创建渲染上下文对象，本质上是对组件实例的代理
+    const renderContext = new Proxy(instance, {
+      get(t, k) {
+        const { state, props } = t;
+        if (state && k in state) return state[k];
+        else if (props && k in props) return props[k];
+        else {
+          console.error("属性不存在");
+        }
+      },
+      set(t, k, v) {
+        const { state, props } = t;
+        if (state && k in state) {
+          state[k] = v;
+        } else if (props && k in props) {
+          console.error(`尝试修改 prop ${String(k)}. Props 是只读的`);
+        } else {
+          console.error("属性不存在");
+        }
+        return true;
+      },
+    });
+    instance.proxy = renderContext;
+
+    // 处理 methods 等选项 API
+    resolveOptions(instance, componentOptions);
+
+    // 【生命周期】关联副作用前
+    created && created.call(renderContext);
+    effect(
+      () => {
+        const subTree = render.call(renderContext, renderContext);
+
+        // isMounted 用于避免副作用函数执行导致同一组件被多次挂载。
+        if (!instance.isMounted) {
+          // 【生命周期】挂载前
+          beforeMount && beforeMount.call(renderContext);
+          // 初次挂载
+          // console.dir(subTree, { depth: null });
+
+          patch(null, subTree, container, anchor);
+          instance.isMounted = true;
+          // 【生命周期】挂载后
+          mounted && mounted.call(renderContext);
+        } else {
+          console.log("【重新渲染】");
+          // console.dir(subTree, { depth: null });
+          // 【生命周期】更新前
+          beforeUpdate && beforeUpdate.call(renderContext);
+          // 副作用引起的自更新
+          patch(instance.subTree, subTree, container, anchor);
+          // 【生命周期】更新后
+          updated && updated.call(renderContext);
+        }
+        instance.subTree = subTree;
+      },
+      { scheduler: queueJob }
+    );
+  }
+
+  /**
+   * 更新组件
+   * @param n1 - 旧 VNode
+   * @param n2 - 新 VNode
+   * @param anchor - 插入锚点
+   */
+  function patchComponent(n1: VNode, n2: VNode, anchor: Container | null) {
+    // 设置新 VNode 的组件实例
+    const instance = (n2.component = n1.component!);
+    // 获取原来的 props 数据
+    const { props } = instance;
+
+    if (hasPropsChanged(n1.props, n2.props)) {
+      // 解析当前 props 的数据
+      const [nextProps] = resolveProps((<ComponentOptions>n2.type)?.props, n2.props);
+      // 由于 props 本身是浅响应的，故修改 props 即可引发组件重新渲染
+      // 更新 props
+      for (const k in nextProps) {
+        props[k] = nextProps[k];
+      }
+      // 删除 props
+      for (const k in props) {
+        if (!(k in nextProps)) delete props[k];
+      }
+    }
+  }
 
   /**
    * 将虚拟节点转换为真实 DOM 并将其插入到父元素中
