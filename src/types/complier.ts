@@ -1,44 +1,186 @@
 /**
- * 模板解析状态机
+ * 解析器状态
+ * - `DATA`: 标签与 HTML 实体
+ * - `RCDATA`: HTML 实体
+ * - `RAWTEXT` | `CDATA`: 纯文本
  */
-export enum ParserState {
-  initial,
-  tagOpen,
-  tagName,
-  text,
-  tagEnd,
-  tagEndName,
+export enum ParseTextMode {
+  DATA,
+  RCDATA,
+  RAWTEXT,
+  CDATA,
 }
 
-export interface Token {
+/** 模板解析上下文 */
+export interface ParserContext {
+  source: string;
+  mode: ParseTextMode;
+
+  // 相关方法
+  advanceBy: (num: number) => void;
+  advanceSpaces: () => void;
+}
+
+/** 基础模板 AST 节点 */
+export interface BaseTemplateNode {
   type: string;
-  name?: string; // 标签名称
-  content?: string; // 文字内容
+
+  // jsNode 属性
+  jsNode?: JavascriptNode;
 }
 
-export interface ASTNode {
-  type: "Root" | "Element" | "Text";
-
-  // type为Element时具有的属性
-  tag?: string;
-  children?: ASTNode[];
-  // type为Text时具有的属性
-  content?: string;
-
-  // 模板AST转换后的JS AST
-  jsNode?: ExpressionNode;
+/** 模板 AST 文本节点 */
+export interface TemplateTextNode extends BaseTemplateNode {
+  type: "Text";
+  content: string;
 }
+
+/** 模板 AST 注释节点 */
+export interface TemplateCommentNode extends BaseTemplateNode {
+  type: "Comment";
+  content: string;
+}
+
+/** 模板 AST HTML 标签节点 */
+export interface TemplateElementNode extends BaseTemplateNode {
+  type: "Element";
+
+  // 标签名称
+  tag: string;
+  // 属性
+  props: ElementProp[];
+  // 是否为自闭合标签
+  isSelfClosing: boolean;
+  // 子节点
+  children: TemplateNode[];
+}
+
+/** HTML 标签节点的属性 */
+export interface ElementProp extends BaseTemplateNode {
+  type: "Attribute" | "Directive" | "Event" | "ReactiveProp";
+  name: string;
+
+  // 属性值
+  value?: string;
+  // 指令表达式
+  exp?: TemplateExpression;
+}
+
+/** 模板 AST 插值节点 */
+export interface TemplateInterpolation extends BaseTemplateNode {
+  type: "Interpolation";
+  content: TemplateExpression;
+}
+
+/** 模板 AST 表达式节点 */
+export interface TemplateExpression extends BaseTemplateNode {
+  type: "Expression";
+  content: string;
+}
+
+/** 模板 AST 根节点 */
+export interface TemplateRootNode extends BaseTemplateNode {
+  type: "Root";
+  children: TemplateNode[];
+}
+
+// 模板 AST 节点
+export type TemplateNode =
+  | TemplateTextNode
+  | TemplateElementNode
+  | TemplateRootNode
+  | TemplateInterpolation
+  | TemplateExpression
+  | TemplateCommentNode;
 
 /** AST 转换上下文 */
 export interface TransformContext {
-  currentNode: ASTNode | null;
+  currentNode: TemplateNode | null;
   childIndex: number;
-  parent: ASTNode | null;
+  parent: TemplateNode | null;
   nodeTransforms: Function[];
+}
 
-  // 相关方法
-  replaceNode: (node: ASTNode) => void;
-  removeNode: () => void;
+// js 抽象语法树
+export interface JavascriptNode {
+  type:
+    | "FunctionDeclaration"
+    | "CallExpression"
+    | "StringLiteral"
+    | "ArrayExpression"
+    | "ExpressionLiteral"
+    | "Identifier"
+    | "ElementDescriptor"
+    | "ReturnStatement"
+    | "KeyValuePair"
+    | "ObjectExpression";
+}
+
+export interface FunctionDeclaration extends JavascriptNode {
+  type: "FunctionDeclaration";
+  id: IdentifierNode;
+  body: JavascriptNode[];
+}
+
+export interface IdentifierNode extends JavascriptNode {
+  type: "Identifier";
+  name: string;
+}
+
+export interface CallExpression extends JavascriptNode {
+  type: "CallExpression";
+  callee: IdentifierNode;
+  arguments: JavascriptNode[];
+}
+
+export interface StringLiteral extends JavascriptNode {
+  type: "StringLiteral";
+  value: string;
+}
+
+export interface ArrayExpression extends JavascriptNode {
+  type: "ArrayExpression";
+  elements: JavascriptNode[];
+}
+
+export interface ReturnStatementNode extends JavascriptNode {
+  type: "ReturnStatement";
+  return: JavascriptNode;
+}
+
+export interface PairNode extends JavascriptNode {
+  type: "KeyValuePair";
+  first: JavascriptNode;
+  last: JavascriptNode;
+}
+
+export interface ArgumentNode extends JavascriptNode {
+  type: "StringLiteral" | "ArrayExpression" | "ExpressionLiteral" | "ObjectExpression";
+  value?: string | TemplateExpression;
+  elements?: JavascriptNode[];
+}
+
+export interface TransformDirectiveContext {
+  attrs: PairNode[];
+  events: PairNode[];
+
+  createKeyValueObjectNode: (
+    key: string,
+    value: string | ArgumentNode,
+    type?: "Expression" | "StringLiteral"
+  ) => PairNode;
+}
+
+type DirectiveHandler = (
+  directive: ElementProp,
+  context: TransformDirectiveContext
+) => void;
+export interface DirectiveTransformer {
+  model: DirectiveHandler;
+  show: DirectiveHandler;
+  if: DirectiveHandler;
+  html: DirectiveHandler;
+  [key: string]: DirectiveHandler;
 }
 
 /** AST 生成器上下文 */
@@ -54,51 +196,3 @@ export interface GeneratorContext {
   indent: () => void;
   deIndent: () => void;
 }
-
-/** 字符串字面量 */
-export interface StringLiteral {
-  type: "StringLiteral";
-  value: string;
-}
-
-/** 函数标识 */
-export interface Identifier {
-  type: "Identifier";
-  name: string;
-}
-
-/** 表达式组成的数组 */
-export interface ArrayExpression {
-  type: "ArrayExpression";
-  elements: ExpressionNode[];
-}
-
-/** 函数调用表达式 */
-export interface CallExpression {
-  type: "CallExpression";
-  /** 被调用函数的标识 */
-  callee: Identifier;
-  /** 参数 */
-  arguments: ExpressionNode[];
-}
-
-/** 函数表达式 */
-export interface FunctionDecl {
-  type: "FunctionDecl";
-  id: Identifier;
-  params: ExpressionNode[];
-  body: ExpressionNode[];
-}
-
-export interface ReturnStatement {
-  type: "ReturnStatement";
-  return: ExpressionNode;
-}
-
-/** 表达式节点 */
-export type ExpressionNode =
-  | StringLiteral
-  | ArrayExpression
-  | CallExpression
-  | FunctionDecl
-  | ReturnStatement;
