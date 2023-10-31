@@ -1,4 +1,4 @@
-import { ExpressionNode, GeneratorContext } from "types/complier";
+import { JavascriptNode, GeneratorContext } from "types/complier";
 import { genNode } from "./genHelpers";
 
 /**
@@ -6,7 +6,7 @@ import { genNode } from "./genHelpers";
  * @param node - JavaScript AST
  * @returns 生成的代码字符串
  */
-export function generate(node: ExpressionNode) {
+export function generate(node: JavascriptNode, __TEST__ = false) {
   // 初始化代码生成上下文
   const context: GeneratorContext = {
     code: "", // 生成的代码字符串
@@ -14,17 +14,27 @@ export function generate(node: ExpressionNode) {
 
     // 拼接代码
     push: (code) => (context.code += code),
+
+    // 【开发环境中格式美化,测试环境不美化】
     // 添加新的一行，并根据当前缩进级别添加空格
-    newline: () => (context.code += "\n" + `  `.repeat(context.currentIndent)),
+    newline: () => {
+      if (__DEV__ && !__TEST__) {
+        context.code += "\n" + `  `.repeat(context.currentIndent);
+      }
+    },
     // 增加缩进级别，并添加新的一行
     indent: () => {
-      context.currentIndent++;
-      context.newline();
+      if (__DEV__ && !__TEST__) {
+        context.currentIndent++;
+        context.newline();
+      }
     },
     // 减少缩进级别，并添加新的一行
     deIndent: () => {
-      context.currentIndent--;
-      context.newline();
+      if (__DEV__ && __TEST__) {
+        context.currentIndent--;
+        context.newline();
+      }
     },
   };
 

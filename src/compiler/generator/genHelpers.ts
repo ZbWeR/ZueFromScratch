@@ -1,58 +1,56 @@
+import { ArgumentNode, PairNode } from "../../types/complier";
 import {
   StringLiteral,
   ArrayExpression,
   CallExpression,
-  FunctionDecl,
-  ReturnStatement,
+  FunctionDeclaration,
+  ReturnStatementNode,
   GeneratorContext,
-  ExpressionNode,
+  JavascriptNode,
 } from "types/complier";
 
 /**
  * 根据节点类型生成对应的代码
  * @param node - 抽象语法树节点
  * @param context - 代码生成上下文 */
-export function genNode(node: ExpressionNode, context: GeneratorContext) {
-  console.log(node);
+export function genNode(node: JavascriptNode, context: GeneratorContext) {
   switch (node.type) {
-    case "FunctionDecl":
-      genFunctionDecl(node, context);
+    case "FunctionDeclaration":
+      genFunctionDecl(node as FunctionDeclaration, context);
       break;
     case "ReturnStatement":
-      genReturnStatement(node, context);
+      genReturnStatement(node as ReturnStatementNode, context);
       break;
     case "CallExpression":
-      genCallExpression(node, context);
+      genCallExpression(node as CallExpression, context);
       break;
     case "StringLiteral":
-      genStringLiteral(node, context);
+      genStringLiteral(node as StringLiteral, context);
       break;
     case "ArrayExpression":
-      genArrayExpression(node, context);
+      genArrayExpression(node as ArrayExpression, context);
+      break;
+    case "ObjectExpression":
+      genObjectExpression(node as ArgumentNode, context);
+      break;
+    case "ExpressionLiteral":
+      genExpressionLiteral(node as ArgumentNode, context);
+      break;
+    case "KeyValuePair":
+      genKeyValuePair(node as PairNode, context);
       break;
   }
 }
 
-/** 生成一个节点列表 */
-function genNodeList(nodes: ExpressionNode[], context: GeneratorContext) {
-  const { push } = context;
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    genNode(node, context);
-    if (i !== nodes.length - 1) push(", ");
-  }
-}
-
-/** 生成一个完整的函数代码 */
-function genFunctionDecl(node: FunctionDecl, context: GeneratorContext) {
+/**
+ * 生成一个完成的函数代码，通常用于生成渲染函数
+ * @param node - 函数声明节点
+ * @param context - 代码生成上下文
+ */
+function genFunctionDecl(node: FunctionDeclaration, context: GeneratorContext) {
   const { push, indent, deIndent } = context;
-  push(`function ${node.id.name}`);
-  push(` (`);
-
-  // 为函数的参数生成代码
-  genNodeList(node.params, context);
-
-  push(`)`);
+  // push(`function ${node.id.name}`);
+  push("with(this)");
   push(` {`);
   indent();
 
@@ -63,23 +61,8 @@ function genFunctionDecl(node: FunctionDecl, context: GeneratorContext) {
   push(`}`);
 }
 
-/** 生成数组表达式 */
-function genArrayExpression(node: ArrayExpression, context: GeneratorContext) {
-  const { push } = context;
-  push("[");
-  // 生成数组元素
-  genNodeList(node.elements, context);
-  push("]");
-}
-
-/** 生成字符串字面量 */
-function genStringLiteral(node: StringLiteral, context: GeneratorContext) {
-  const { push } = context;
-  push(`'${node.value}'`);
-}
-
-/** 生成返回语句 */
-function genReturnStatement(node: ReturnStatement, context: GeneratorContext) {
+/** 生成函数返回语句 */
+function genReturnStatement(node: ReturnStatementNode, context: GeneratorContext) {
   const { push } = context;
   push(`return `);
   genNode(node.return, context);
@@ -92,4 +75,58 @@ function genCallExpression(node: CallExpression, context: GeneratorContext) {
   push(`${callee.name}(`);
   genNodeList(args, context);
   push(`)`);
+}
+
+/** 生成参数列表 */
+function genNodeList(nodes: JavascriptNode[], context: GeneratorContext) {
+  const { push } = context;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    genNode(node, context);
+    if (i !== nodes.length - 1) push(", ");
+  }
+}
+
+/** 生成字符串字面量 */
+function genStringLiteral(node: StringLiteral, context: GeneratorContext) {
+  const { push } = context;
+
+  // 去除换行符并转义单引号
+  node.value = node.value.replace(/\n/g, "").replace(/'/g, "\\'");
+
+  push(`'${node.value}'`);
+}
+
+/** 生成数组字面量 */
+function genArrayExpression(node: ArrayExpression, context: GeneratorContext) {
+  const { push } = context;
+
+  push("[ ");
+  genNodeList(node.elements, context);
+  push(" ]");
+}
+
+/** 生成对象字面量 */
+function genObjectExpression(node: ArgumentNode, context: GeneratorContext) {
+  const { push } = context;
+
+  push("{ ");
+  genNodeList(node.elements!, context);
+  push(" }");
+}
+
+/** 生成表达式字面量 */
+function genExpressionLiteral(node: ArgumentNode, context: GeneratorContext) {
+  const { push } = context;
+
+  push(`(${node.value!})`);
+}
+
+/** 生成键值对 */
+function genKeyValuePair(node: PairNode, context: GeneratorContext) {
+  const { push } = context;
+
+  genNode(node.first, context);
+  push(":");
+  genNode(node.last, context);
 }
