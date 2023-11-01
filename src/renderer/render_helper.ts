@@ -2,6 +2,8 @@ import { isFunction } from "../utils/general";
 import { ComponentOptions, Container } from "types/renderer";
 import { ComponentInstance } from "../types/renderer";
 import { warn } from "../utils/debug";
+import { watch } from "../reactivity/watch";
+import { computed } from "../reactivity/computed";
 
 /**
  * 更新属性
@@ -46,10 +48,26 @@ export function patchProps(el: Container, key: string, prevValue: any, nextValue
 
   // 对 class 进行特殊处理
   else if (key === "class") {
-    el.className = normalizeClass(nextValue) || "";
+    const newName = normalizeClass(nextValue);
+    el.className = el.className ? `${el.className} ${newName}` : newName;
   }
 
-  // TODO: 对 style 进行特殊优化
+  // 动态 class 处理
+  else if (key === "_class_") {
+    const newName = normalizeClass(nextValue);
+    el.className = el.className ? `${el.className} ${newName}` : newName;
+  }
+
+  // 动态 style 处理
+  else if (key === "_style_") {
+    if (Array.isArray(nextValue)) {
+      nextValue.forEach((item) => {
+        Object.assign(el.style, item);
+      });
+    } else if (typeof nextValue === "object") {
+      Object.assign(el.style, nextValue);
+    }
+  }
 
   // 普通属性处理
   else if (shouldSetAsDOMProps(el, key)) {
@@ -214,8 +232,9 @@ export function hasPropsChanged(
  * @param instance - 组件实例
  */
 export function resolveOptions(instance: ComponentInstance, options: ComponentOptions) {
-  const { methods } = options;
+  const { methods, computed: computedFns, watch: watchFns } = options;
 
+  // 处理 methods 方法
   if (methods) {
     for (const key in methods) {
       const method = methods[key];
@@ -227,6 +246,38 @@ export function resolveOptions(instance: ComponentInstance, options: ComponentOp
             `Did you reference the function correctly?`,
           "Components"
         );
+      }
+    }
+  }
+
+  // 处理计算属性
+  if (computedFns) {
+    for (const key in computedFns) {
+      const fn = computedFns[key];
+      if (isFunction(fn)) {
+        // 将计算属性绑定到 instance.state 中
+
+        const get = fn.bind(instance.proxy);
+        const c = computed(get);
+        Object.defineProperty(instance.state, key, {
+          enumerable: true,
+          configurable: true,
+          get: () => c.value,
+        });
+      }
+    }
+  }
+
+  // 处理 watch
+  if (watchFns) {
+    for (const key in watchFns) {
+      const handler = watchFns[key];
+      if (isFunction(handler)) {
+        const isObject = typeof (instance.proxy as any)[key] === "object";
+        const watchTarget = isObject
+          ? (instance.proxy as any)[key]
+          : () => (instance.proxy as any)[key];
+        watch(watchTarget, handler.bind(instance.proxy));
       }
     }
   }

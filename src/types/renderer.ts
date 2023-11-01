@@ -6,6 +6,8 @@ export interface VNode {
   children: string | VNode[] | null;
   props?: Record<string | symbol, any>;
   el?: Container; // 对应的真实 DOM ,便于卸载操作
+  _if?: boolean;
+
   key?: any; // 便于 diff 比较
   component?: ComponentInstance; // 对应组件实例
 }
@@ -14,12 +16,16 @@ export interface VNode {
  * 组件的选项对象
  */
 export interface ComponentOptions {
-  render: (...args: any[]) => VNode;
+  render?: (...args: any[]) => VNode;
 
   name?: string;
   methods?: Record<string, unknown>;
   data?: (...args: any[]) => Record<string | symbol, any>;
   props?: Record<string | symbol, any>;
+  template?: string;
+
+  computed?: Record<string, Function>;
+  watch?: Record<string, Function>;
 
   // 声明周期
   beforeCreate?: () => void;
@@ -37,6 +43,10 @@ export interface ComponentInstance {
   subTree: VNode | null;
 
   proxy: ComponentInstance | null;
+
+  _h?: Function;
+  _t?: Function;
+  _s?: Function;
 }
 
 /**
@@ -66,7 +76,7 @@ export interface RendererOptions {
   createElement: (tag: any) => any;
   insert: (el: any, parent: any, anchor?: any) => any;
   setElementText: (el: any, text: any) => any;
-  createText: (text: string) => any;
+  createText: (text: string, type: Symbol) => any;
   setText: (el: any, text: string) => any;
   // patchProps: (el: any, key: any, prevValue: any, nextValue: any) => any;
 }
