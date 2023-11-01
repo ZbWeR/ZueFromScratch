@@ -167,7 +167,7 @@ export interface TransformDirectiveContext {
   createKeyValueObjectNode: (
     key: string,
     value: string | ArgumentNode,
-    type?: "Expression" | "StringLiteral"
+    type: "Expression" | "StringLiteral"
   ) => PairNode;
 }
 

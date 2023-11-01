@@ -1,4 +1,4 @@
-import { TriggerType } from "types/watchEffect.js";
+import { TriggerType } from "types/watchEffect";
 import { track, trigger, arrayInstrumentations } from "../core/effect/watchEffect";
 import { warn, error } from "../utils/debug";
 

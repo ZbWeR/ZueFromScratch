@@ -17,7 +17,7 @@ import {
   TemplateInterpolation,
 } from "types/complier";
 
-import { error } from "src/utils/debug";
+import { error } from "../../utils/debug";
 import { decodeHTMLText } from "./decodeHTML";
 import { selfClosingTags } from "./reference";
 import { parseDirectives } from "../directive/parser";
@@ -59,6 +59,7 @@ export function parseChildren(context: ParserContext, ancestors: TemplateNode[])
     // node 不存在说明为其他两种模式, 一律当作文本处理
     if (!node) {
       node = parseText(context);
+      if (node.content.trim().trimEnd() === "") continue;
     }
     nodes.push(node);
   }
@@ -301,9 +302,9 @@ function parseComment(context: ParserContext): TemplateCommentNode {
 function isEnd(context: ParserContext, ancestors: TemplateNode[]) {
   if (!context.source) return true;
 
-  // TODO: check ancestors type
   for (let i = ancestors.length - 1; i >= 0; i--) {
-    if (context.source.startsWith(`</${(ancestors[i] as TemplateElementNode).tag}`))
+    const ancestor = ancestors[i];
+    if (ancestor.type === "Element" && context.source.startsWith(`</${ancestor.tag}`))
       return true;
   }
   return false;

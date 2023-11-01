@@ -50,7 +50,8 @@ export function watch<T>(
     }
     callBack(newValue, oldValue, onInvalidate);
     // TODO:暂时使用浅拷贝
-    oldValue = { ...newValue };
+    if (typeof newValue === "object") oldValue = Object.assign({}, newValue);
+    else oldValue = newValue;
   };
 
   // 创建副作用函数，源数据变化时执行 scheduler

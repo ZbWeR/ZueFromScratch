@@ -9,7 +9,7 @@ import {
   ComponentOptions,
   ComponentInstance,
 } from "types/renderer";
-import { Text, Fragment } from "./VNode";
+import { Text, Fragment } from "./vnode";
 import {
   patchProps,
   getLISIndex,
@@ -21,6 +21,8 @@ import {
 import { defaultRendererOptions } from "./default";
 import { reactive, shallowReactive } from "../reactivity/index";
 import { effect } from "../core/effect/index";
+import { createVNode, createTextVNode, stringVal } from "../renderer/vnode_utils";
+import { Comment } from "./vnode";
 
 // 创建一个渲染器
 export function createRenderer(userOptions?: RendererOptions) {
@@ -68,16 +70,34 @@ export function createRenderer(userOptions?: RendererOptions) {
     // 普通标签元素
     if (typeof type === "string") {
       if (!oldVnode) {
-        mountElement(newVnode, container, anchor);
+        if (newVnode._if !== false) mountElement(newVnode, container, anchor);
+        else {
+          const tmpVnode: VNode = {
+            type: Comment,
+            children: "v-if",
+          };
+          patch(null, tmpVnode, container, anchor);
+        }
       } else {
-        patchElement(oldVnode, newVnode);
+        if (oldVnode._if !== false && newVnode._if !== false)
+          patchElement(oldVnode, newVnode);
+        else if (oldVnode._if !== false && newVnode._if === false) {
+          const tmpVnode: VNode = {
+            type: Comment,
+            children: "v-if",
+          };
+          patch(oldVnode, tmpVnode, container, anchor);
+        } else if (oldVnode._if === false && newVnode._if != false) {
+          // 旧节点不存在则新建
+          mountElement(newVnode, container, anchor);
+        }
       }
     }
     // 文本节点
-    else if (type === Text) {
+    else if (typeof type === "symbol" && type !== Fragment) {
       if (!oldVnode) {
         // 旧节点不存在则新建
-        const el = (newVnode.el = createText(<string>newVnode.children));
+        const el = (newVnode.el = createText(<string>newVnode.children, type as Symbol));
         insert(el, container);
       } else {
         // 旧节点存在则比较并覆盖
@@ -391,7 +411,7 @@ export function createRenderer(userOptions?: RendererOptions) {
     beforeCreate && beforeCreate();
 
     // 获取自身状态数据与传递的 props
-    const state = data ? reactive(data()) : null;
+    const state = data ? reactive(data()) : {};
     const [props, attrs] = resolveProps(propsOptions, vnode.props);
 
     const instance: ComponentInstance = {
@@ -400,6 +420,10 @@ export function createRenderer(userOptions?: RendererOptions) {
       isMounted: false,
       subTree: null,
       proxy: null,
+
+      _h: createVNode,
+      _s: stringVal,
+      _t: createTextVNode,
     };
     vnode.component = instance;
 
@@ -407,10 +431,21 @@ export function createRenderer(userOptions?: RendererOptions) {
     const renderContext = new Proxy(instance, {
       get(t, k) {
         const { state, props } = t;
+
+        if (k === Symbol.unscopables) {
+          let unscopables = Object.assign({}, t.state, t.props);
+          for (let key in unscopables) {
+            unscopables[key] = false;
+          }
+          return unscopables;
+        }
+
+        if (typeof k === "string" && k.startsWith("_")) return Reflect.get(t, k, t);
+
         if (state && k in state) return state[k];
         else if (props && k in props) return props[k];
         else {
-          console.error("属性不存在");
+          console.error(`属性 ${String(k)} 不存在`);
         }
       },
       set(t, k, v) {
@@ -420,9 +455,16 @@ export function createRenderer(userOptions?: RendererOptions) {
         } else if (props && k in props) {
           console.error(`尝试修改 prop ${String(k)}. Props 是只读的`);
         } else {
-          console.error("属性不存在");
+          console.error(`属性 ${String(k)} 不存在`);
         }
         return true;
+      },
+
+      has(t, k) {
+        const { state, props } = t;
+        if (state && k in state) return true;
+        if (props && k in props) return true;
+        return k in t;
       },
     });
     instance.proxy = renderContext;
@@ -434,7 +476,7 @@ export function createRenderer(userOptions?: RendererOptions) {
     created && created.call(renderContext);
     effect(
       () => {
-        const subTree = render.call(renderContext, renderContext);
+        const subTree = render!.call(renderContext, renderContext);
 
         // isMounted 用于避免副作用函数执行导致同一组件被多次挂载。
         if (!instance.isMounted) {
@@ -541,3 +583,5 @@ export function createRenderer(userOptions?: RendererOptions) {
     // hydrate,
   };
 }
+
+export * from "./vnode_utils";
