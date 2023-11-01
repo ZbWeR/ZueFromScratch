@@ -15,8 +15,8 @@
     "paths": {
       "vitest": ["node_modules/vitest"],
       "types/*": ["src/types/*"],
-      "reactivity": ["src/reactivity/*"],
-      "renderer": ["src/renderer/*"],
+      "reactivity/*": ["src/reactivity/*"],
+      "renderer/*": ["src/renderer/*"],
       "compiler/*": ["src/compiler/*"]
     }
     //   "lib": ["DOM","ESNext"]

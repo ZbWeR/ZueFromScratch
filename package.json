@@ -19,6 +19,7 @@
     "execa": "^8.0.1",
     "happy-dom": "^12.9.1",
     "minimist": "^1.2.8",
+    "puppeteer": "^21.4.1",
     "rollup": "^3.29.4",
     "rollup-plugin-typescript2": "^0.36.0",
     "vitest": "^0.34.6"
