@@ -1,4 +1,4 @@
-import { Comment, Text, Fragment } from "../../../src/renderer/VNode";
+import { Comment, Text, Fragment } from "../../../src/renderer/vnode";
 import { ComponentOptions, VNode } from "../../../src/types/renderer";
 
 export const nodesMap = {

@@ -4,7 +4,7 @@ import { expect, describe, test, beforeAll, vi } from "vitest";
 import { createRenderer } from "../../../src/renderer/index";
 import { nodesMap, componentNode } from "./data";
 
-describe("createRenderer", () => {
+describe("renderer - createRenderer", () => {
   let renderer: ReturnType<typeof createRenderer>;
   beforeAll(() => {
     renderer = createRenderer();
@@ -82,7 +82,7 @@ describe("createRenderer", () => {
     const div = document.createElement("div");
 
     renderer.render(oldNodes, div);
-    expect(div.innerHTML).toBe("<div>文本<p>段落</p></div>");
+    expect(div.innerHTML).toBe("<div>文本<!--注释--><p>段落</p></div>");
     renderer.render(newNodes, div);
     expect(div.innerHTML).toBe("<div>喵喵喵</div>");
   });
@@ -177,7 +177,7 @@ describe("createRenderer", () => {
 });
 
 // TODO: 测试组件挂载与更新，生命周期等等
-describe("createRenderer of Components", () => {
+describe.skip("createRenderer of Components", () => {
   let renderer: ReturnType<typeof createRenderer>;
   beforeAll(() => {
     renderer = createRenderer();

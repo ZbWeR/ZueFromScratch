@@ -1,4 +1,4 @@
-import { effect } from "../../src/core/effect/watchEffect";
+import { effect } from "../../../src/core/effect/watchEffect";
 import { test, expect, vi, describe } from "vitest";
 
 describe("Effect", () => {
