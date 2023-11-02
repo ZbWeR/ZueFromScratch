@@ -4,26 +4,70 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <!-- ESM 格式 -->
-    <!-- <script type="module">
-        import { hi } from "../../dist/zue.esm-browser.prod.js"
-        hi();
-    </script> -->
-    <!-- iife 格式 -->
-    <script src="/dist/zue.global.js"></script>
+    <title>Zue Example</title>
+    <script src="./dist/zue.global.prod.js"></script>
+    <script src="https://cdn.TailwindCSS.com"></script>
   </head>
-  <body>
-    <div id="app">
-      <input type="text" z-model="phoneNumber" />
-      <p>{{ phoneNumber }}</p>
-      <p z-html="rawHtml"></p>
-      <p z-show="show">喵喵喵</p>
-      <button @click="toggleShow">Hidden</button>
-      <button @click="add">add</button>
-      <div z-if="show">汪汪汪</div>
-      <p>{{ password }}</p>
-      <div>{{info.age}}</div>
+  <body class="flex items-center justify-center w-screen h-screen bg-zinc-700">
+    <div id="app" class="w-1/3 p-5 rounded-lg bg-slate-400">
+      <div>
+        <!-- z-model & 插值 -->
+        <div class="flex flex-col">
+          <h1 class="text-lg text-white">z-model & 插值语法</h1>
+          <input
+            class="px-4 py-1 mt-4 rounded outline-none"
+            type="text"
+            placeholder="请输入..."
+            z-model="message"
+          />
+          <p class="mt-3 line-clamp-1">你的输入: {{ message }}</p>
+        </div>
+        <!-- z-if & z-show & @event -->
+        <div class="flex flex-col mt-4">
+          <h1 class="text-lg text-white">z-if & z-show & @click</h1>
+          <div class="flex items-center gap-8 mt-4">
+            <button
+              @click="toggleIf"
+              class="px-2 py-1 text-white rounded bg-black/20 hover:bg-black/40"
+            >
+              Click Me
+            </button>
+            <p z-if="ifMsg" class="">Hello World!</p>
+          </div>
+          <div class="flex items-center gap-8 mt-2">
+            <button
+              @click="toggleShow"
+              class="px-2 py-1 text-white rounded bg-black/20 hover:bg-black/40"
+            >
+              Click Me
+            </button>
+            <p z-show="showMsg" class="transition-all">喵喵喵</p>
+          </div>
+        </div>
+        <!-- z-html -->
+        <div class="flex flex-col mt-4">
+          <h1 class="text-lg text-white">z-html</h1>
+          <input
+            class="px-4 py-1 mt-4 rounded outline-none"
+            type="text"
+            placeholder="可以输入一些 HTML 标签..."
+            z-model="rawHTML"
+          />
+          <p class="mt-3" z-html="rawHTML"></p>
+        </div>
+        <!-- 响应式 -->
+        <div class="flex flex-col mt-4">
+          <h1 class="text-lg text-white">响应式</h1>
+          <p class="mt-4" :class="dynamicClass">点击按钮切换颜色与数值: {{count}}</p>
+          <div class="flex justify-between">
+            <p class="w-1/2 ">其平方为: {{ count2 }}</p>
+            <p class="w-1/2 ">上一次的值为: {{ oldCount2 }} </p>
+          </div>
+          <div class="flex items-center justify-around mt-4">
+            <button @click="addCount" class="px-2 py-1 text-white rounded bg-black/20 hover:bg-black/40">Add Count</button>
+            <button @click="changeColor" class="px-2 py-1 text-white rounded bg-black/20 hover:bg-black/40">Change Color</button>
+          </div>
+      </div>
     </div>
   </body>
 </html>
@@ -32,36 +76,38 @@
   const app = new zue.zue({
     data() {
       return {
-        id: "hello world",
-        foo: "123",
-        show: false,
-        phoneNumber: "请输入",
-        rawHtml: "<h1>我是 z-html </h1>",
-        info: {
-          name: "zue",
-          age: 18,
-        },
+        message: "",
+        ifMsg: true,
+        showMsg: true,
+        rawHTML: "",
+        count:0,
+        oldCount2:0,
+        dynamicClass:'text-black',
       };
     },
     methods: {
-      add() {
-        this.info.age++;
+      toggleIf() {
+        this.ifMsg = !this.ifMsg;
       },
       toggleShow() {
-        this.show = !this.show;
+        this.showMsg = !this.showMsg;
       },
+      addCount(){
+        this.count ++;
+      },
+      changeColor(){
+        // 存在问题!!!
+        this.dynamicClass = this.dynamicClass === 'text-black' ? 'text-white' :'text-black';
+      }
     },
     computed: {
-      password() {
-        return this.phoneNumber.split("").reverse().join("");
+      count2() {
+        return this.count * this.count;
       },
     },
     watch: {
-      info(newVal, oldVal) {
-        console.log(newVal, oldVal);
-      },
-      show(newVal, oldVal) {
-        console.log(newVal, oldVal);
+      count2(newVal, oldVal) {
+        this.oldCount2 = oldVal;
       },
     },
   }).mount("#app");

@@ -23,7 +23,7 @@ export class zue implements ZueInstance {
     }
 
     this.$el = container;
-    const source = this.$options.template || container.outerHTML || "";
+    const source = this.$options.template || container.innerHTML || "";
     // 编译模板内容获得渲染函数
     this.$options.render = compile(source, this) as () => VNode;
 

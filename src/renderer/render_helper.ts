@@ -54,8 +54,13 @@ export function patchProps(el: Container, key: string, prevValue: any, nextValue
 
   // 动态 class 处理
   else if (key === "_class_") {
+    const oldName = normalizeClass(prevValue || "");
     const newName = normalizeClass(nextValue);
-    el.className = el.className ? `${el.className} ${newName}` : newName;
+    el.className = el.className
+      ? el.className.includes(oldName || "\0")
+        ? el.className.replace(oldName, newName)
+        : `${el.className} ${newName}`
+      : newName;
   }
 
   // 动态 style 处理

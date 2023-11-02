@@ -81,9 +81,12 @@
 
     <!-- 动态属性与动态样式 -->
     <div id="case-4">
-      <p :class="bgColor" class="text-black" style="font-weight: 700" :style="small">
-        喵喵喵
-      </p>
+      <div>
+        <p :class="bgColor" class="text-black" style="font-weight: 700" :style="small">
+          喵喵喵
+        </p>
+        <button @click="change">temp</button>
+      </div>
     </div>
     <script>
       zue
@@ -95,6 +98,11 @@
               },
               bgColor: "bg-sky-400",
             };
+          },
+          methods: {
+            change() {
+              this.bgColor = this.bgColor === "bg-sky-400" ? "bg-teal-400" : "bg-sky-400";
+            },
           },
         })
         .mount("#case-4");
