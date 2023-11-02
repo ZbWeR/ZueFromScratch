@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <!-- ESM 格式 -->
+    <!-- <script type="module">
+        import { hi } from "../../dist/zue.esm-browser.prod.js"
+        hi();
+    </script> -->
+    <!-- iife 格式 -->
+    <script src="/dist/zue.global.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <input type="text" z-model="phoneNumber" />
+      <p>{{ phoneNumber }}</p>
+      <p z-html="rawHtml"></p>
+      <p z-show="show">喵喵喵</p>
+      <button @click="toggleShow">Hidden</button>
+      <button @click="add">add</button>
+      <div z-if="show">汪汪汪</div>
+      <p>{{ password }}</p>
+      <div>{{info.age}}</div>
+    </div>
+  </body>
+</html>
+
+<script>
+  const app = new zue.zue({
+    data() {
+      return {
+        id: "hello world",
+        foo: "123",
+        show: false,
+        phoneNumber: "请输入",
+        rawHtml: "<h1>我是 z-html </h1>",
+        info: {
+          name: "zue",
+          age: 18,
+        },
+      };
+    },
+    methods: {
+      add() {
+        this.info.age++;
+      },
+      toggleShow() {
+        this.show = !this.show;
+      },
+    },
+    computed: {
+      password() {
+        return this.phoneNumber.split("").reverse().join("");
+      },
+    },
+    watch: {
+      info(newVal, oldVal) {
+        console.log(newVal, oldVal);
+      },
+      show(newVal, oldVal) {
+        console.log(newVal, oldVal);
+      },
+    },
+  }).mount("#app");
+</script>
