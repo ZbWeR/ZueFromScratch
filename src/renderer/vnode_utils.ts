@@ -71,15 +71,19 @@ function resolveProps(props: Record<string, any>) {
   const showDisplay =
     propsData["_show_"] !== undefined && !propsData["_show_"] ? "none" : "";
 
-  if (showDisplay === "none") {
-    if (Array.isArray(propsData["_style_"])) {
-      propsData["_style_"].push({ display: showDisplay });
-    } else if (propsData["_style_"] && typeof propsData["_style_"] === "object") {
-      propsData["_style_"]["display"] = showDisplay;
+  if (Array.isArray(propsData["_style_"])) {
+    propsData["_style_"].push({ display: showDisplay });
+  } else if (propsData["_style_"] && typeof propsData["_style_"] === "object") {
+    const oldValue = propsData["_style_"]["display"];
+    if (oldValue) {
+      propsData["_style_"]["display"] = showDisplay === "" ? oldValue : showDisplay;
     } else {
-      propsData["_style_"] = { display: showDisplay };
+      propsData["_style_"]["display"] = showDisplay;
     }
+  } else {
+    propsData["_style_"] = { display: showDisplay };
   }
+
   delete propsData["_show_"];
 
   // z-if 不会进行节点的渲染，需要对虚拟 DOM 进行标记

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zue e2e Test</title>
+    <script src="../../dist/zue.global.prod.js"></script>
+  </head>
+  <body>
+    <!-- z-model 双向绑定 -->
+    <div id="case-1">
+      <div>
+        <input z-model="foo" />
+        <h1>{{ foo }}</h1>
+      </div>
+    </div>
+
+    <script>
+      zue
+        .createApp({
+          data() {
+            return {
+              foo: "hello",
+              show: true,
+            };
+          },
+        })
+        .mount("#case-1");
+    </script>
+
+    <!-- z-if 条件渲染与 @ 事件 -->
+    <div id="case-2">
+      <div>
+        <div>
+          <button z-if="show" @click="show=false, count++">is showing</button>
+          <button z-if="!show" @click="show=true, count++">not showing</button>
+        </div>
+        <div>
+          <h1>{{ count }}</h1>
+        </div>
+      </div>
+    </div>
+    <script>
+      zue
+        .createApp({
+          data() {
+            return {
+              count: 0,
+              show: true,
+            };
+          },
+          methods: {
+            add() {
+              this.count++;
+            },
+          },
+        })
+        .mount("#case-2");
+    </script>
+
+    <!-- z-show 与 z-html -->
+    <div id="case-3">
+      <div>
+        <button @click="show=!show">toggle</button>
+        <div id="raw-html" z-show="show" z-html="html"></div>
+      </div>
+    </div>
+    <script>
+      zue
+        .createApp({
+          data() {
+            return {
+              show: true,
+              html: "<h1>hello</h1>",
+            };
+          },
+        })
+        .mount("#case-3");
+    </script>
+
+    <!-- 动态属性与动态样式 -->
+    <div id="case-4">
+      <p :class="bgColor" class="text-black" style="font-weight: 700" :style="small">
+        喵喵喵
+      </p>
+    </div>
+    <script>
+      zue
+        .createApp({
+          data() {
+            return {
+              small: {
+                "font-size": "12px",
+              },
+              bgColor: "bg-sky-400",
+            };
+          },
+        })
+        .mount("#case-4");
+    </script>
+  </body>
+</html>

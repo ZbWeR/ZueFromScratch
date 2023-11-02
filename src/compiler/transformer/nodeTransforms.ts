@@ -189,7 +189,7 @@ export function transformElement(node: TemplateNode) {
             ? prop.exp!.content
             : "null";
           const isFunction = `(typeof ${content} === 'function')`;
-          const functionWrapper = `() => { ${content} }`;
+          const functionWrapper = `() => { ${prop.exp!.content} }`;
           const result = `${isFunction} ? ${content} : ${functionWrapper}`;
 
           events.push(createKeyValueObjectNode(prop.name, result, "Expression"));
